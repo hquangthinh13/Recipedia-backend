@@ -5,10 +5,12 @@ import cors from "cors";
 import recipeRoutes from "./routes/recipeRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
 
 import { connectDB } from "./config/db.js";
 
 dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 5001;
 
@@ -26,6 +28,8 @@ app.use(express.json());
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/comments", commentRoutes);
+
+app.use("/api/upload", uploadRoutes);
 
 connectDB().then(() => {
   app.listen(PORT, () => {
