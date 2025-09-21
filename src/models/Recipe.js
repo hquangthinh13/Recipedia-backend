@@ -6,9 +6,10 @@ const commentSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-const IngredientSchema = new mongoose.Schema({
-  name: { type: String, trim: true },
-  amount: { type: String, trim: true },
+const ingredientSchema = new mongoose.Schema({
+  name: { type: String, trim: true, required: true },
+  amount: { type: Number, required: true },
+  measurement: { type: String, trim: true },
 });
 
 const recipeSchema = new mongoose.Schema(
@@ -19,15 +20,22 @@ const recipeSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    coverImage: { type: String }, // URL/path
-    cookingTime: { type: String },
-    dishType: { type: String },
-    ingredients: { type: [IngredientSchema], required: true },
-    instructions: { type: String, required: true }, // full cooking instructions
+    coverImage: { type: String }, // URL
+    cookingTime: {
+      type: String,
+      enum: ["quick", "medium", "long", "veryLong"],
+      default: "medium",
+    },
+    dishType: {
+      type: String,
+      enum: ["main", "side", "dessert", "snack", "drink"],
+    },
+    ingredients: { type: [ingredientSchema], required: true },
+    instructions: { type: String, required: true },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     comments: [commentSchema],
   },
   { timestamps: true }
-); // includes createdAt + updatedAt
+);
 
 export default mongoose.model("Recipe", recipeSchema);

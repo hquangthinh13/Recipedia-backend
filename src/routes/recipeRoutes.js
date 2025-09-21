@@ -29,31 +29,38 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Create recipe (auth required)
+// Create new recipe
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const {
       title,
-      instructions,
+      coverImage,
       cookingTime,
       dishType,
       ingredients,
-      coverImage,
+      instructions,
     } = req.body;
+
+    if (!title || !ingredients || ingredients.length === 0) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
     const newRecipe = new Recipe({
       title,
-      instructions,
+      author: req.user.id, // always taken from token
+      coverImage,
       cookingTime,
       dishType,
       ingredients,
-      coverImage,
-      author: req.user.id, // logged-in user is author
+      instructions,
     });
 
-    const savedRecipe = await newRecipe.save();
-    res.status(201).json(savedRecipe);
+    await newRecipe.save();
+
+    res.status(201).json(newRecipe);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error creating recipe:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
