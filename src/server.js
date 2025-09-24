@@ -17,18 +17,16 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Middleware to parse JSON request bodies
+
 const allowedOrigins = [
-  "http://localhost:5173",
-  "https://recipedia-frontend.vercel.app",
+  "http://localhost:5173", // local dev
+  "https://recipedia-frontend-omega.vercel.app", // your Vercel frontend
 ];
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // allow requests with no origin (like mobile apps, curl)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
