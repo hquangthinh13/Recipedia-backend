@@ -48,8 +48,12 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
   if (!user) return res.status(400).json({ msg: "User does not exist" });
+  console.log("Login attempt:", email, password);
+  console.log("Stored hash:", user.password);
 
   const isMatch = await bcrypt.compare(password, user.password);
+  console.log("Compare result:", isMatch);
+
   if (!isMatch) return res.status(400).json({ msg: "Invalid credentials" });
   // ✅ Sign the token with user._id
   const token = jwt.sign(
