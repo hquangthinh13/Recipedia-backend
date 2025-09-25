@@ -11,6 +11,11 @@ const getDicebearAvatar = (seed) =>
     seed || "U"
   )}&backgroundColor=ffd5dc,ffdfbf&rounded=true`;
 
+// GET /api/auth/hello
+router.get("/hello", async (__, res) => {
+  res.send("Hello World");
+});
+
 // POST /api/auth/signup
 router.post("/signup", async (req, res) => {
   const { name, email, password } = req.body;
