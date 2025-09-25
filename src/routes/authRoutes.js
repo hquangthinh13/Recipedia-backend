@@ -21,11 +21,7 @@ router.post("/signup", async (req, res) => {
       return res.status(400).json({ msg: "User already exists" });
     }
 
-    // ✅ hash password
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-
-    const user = new User({ name, email, password: passwordHash });
+    const user = new User({ name, email, password });
     await user.save();
 
     // ✅ directly return a token so the frontend doesn't need to call /login again
@@ -49,7 +45,7 @@ router.post("/login", async (req, res) => {
   const user = await User.findOne({ email });
   if (!user) return res.status(400).json({ msg: "User does not exist" });
   console.log("Login attempt:", email, password);
-  console.log("Stored hash:", user.password);
+  // console.log("Stored hash:", user.password);
 
   const isMatch = await bcrypt.compare(password, user.password);
   console.log("Compare result:", isMatch);
