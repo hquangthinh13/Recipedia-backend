@@ -239,7 +239,19 @@ router.post("/request-password-reset", async (req, res) => {
     });
 
     // Send email
-    await transporter.sendMail({
+    // await transporter.sendMail({
+    //   to: email,
+    //   subject: "Your Recipedia Password Reset Code",
+    //   html: `
+    //     <h1>Password Reset Request</h1>
+    //     <p>Here is your password reset code:</p>
+    //     <h2>${resetCode}</h2>
+    //     <p>This code will expire in 10 minutes.</p>
+    //     <p>If you did not request this, please ignore this email.</p>
+    //   `,
+    // });
+    await resend.emails.send({
+      from: process.env.EMAIL_USER,
       to: email,
       subject: "Your Recipedia Password Reset Code",
       html: `
@@ -250,7 +262,6 @@ router.post("/request-password-reset", async (req, res) => {
         <p>If you did not request this, please ignore this email.</p>
       `,
     });
-
     res.json({ msg: "Password reset code sent to your email." });
   } catch (err) {
     console.error("Password reset request error:", err);
