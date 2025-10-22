@@ -77,7 +77,7 @@ router.post("/signup", async (req, res) => {
     //   `,
     // });
     await resend.emails.send({
-      from: process.env.EMAIL_USER,
+      from: "Recipedia <auto@recipedia.com>",
       to: email,
       subject: "Your Recipedia Verification Code",
       html: `
@@ -162,7 +162,7 @@ router.post("/resend-code", async (req, res) => {
   //   `,
   // });
   await resend.emails.send({
-    from: process.env.EMAIL_USER,
+    from: "Recipedia <auto@recipedia.com>",
     to: email,
     subject: "Your Recipedia Verification Code",
     html: `
@@ -251,7 +251,7 @@ router.post("/request-password-reset", async (req, res) => {
     //   `,
     // });
     await resend.emails.send({
-      from: process.env.EMAIL_USER,
+      from: "Recipedia <auto@recipedia.com>",
       to: email,
       subject: "Your Recipedia Password Reset Code",
       html: `
