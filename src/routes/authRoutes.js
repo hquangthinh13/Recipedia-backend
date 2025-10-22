@@ -311,9 +311,8 @@ router.post("/reset-password", async (req, res) => {
       return res.status(404).json({ msg: "User not found." });
     }
 
-    // Hash new password
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
+    user.password = newPassword;
+    await user.save();
     await user.save();
 
     // Remove pending reset entry

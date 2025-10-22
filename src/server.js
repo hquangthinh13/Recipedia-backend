@@ -75,6 +75,6 @@ app.use("/api-docs", swaggerui.serve, swaggerui.setup(spacs));
 
 connectDB().then(() => {
   app.listen(PORT, () => {
-    console.log("Server is running on port 5001");
+    console.log("Server is running.");
   });
 });
