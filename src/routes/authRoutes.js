@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import nodemailer from "nodemailer";
-import crypto from "crypto";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -16,10 +15,13 @@ const pendingVerifications = new Map();
 // ✅ Email transporter (using environment variables)
 const transporter = nodemailer.createTransport({
   service: "gmail",
+  port: 465, // use 465 for secure (SSL), or 587 for STARTTLS
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  connectionTimeout: 10000, // 10 seconds
 });
 
 const getDicebearAvatar = (seed) =>
