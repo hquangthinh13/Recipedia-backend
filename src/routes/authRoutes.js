@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import { Resend } from "resend";
 
 dotenv.config();
 
@@ -12,17 +13,19 @@ const router = express.Router();
 // Temporary in-memory store for verification codes
 const pendingVerifications = new Map();
 
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 // ✅ Email transporter (using environment variables)
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  port: 465, // use 465 for secure (SSL), or 587 for STARTTLS
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  connectionTimeout: 10000, // 10 seconds
-});
+// const transporter = nodemailer.createTransport({
+//   service: "gmail",
+//   port: 465, // use 465 for secure (SSL), or 587 for STARTTLS
+//   secure: true,
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASS,
+//   },
+//   connectionTimeout: 10000, // 10 seconds
+// });
 
 const getDicebearAvatar = (seed) =>
   `https://api.dicebear.com/9.x/micah/svg?seed=${encodeURIComponent(
@@ -63,7 +66,18 @@ router.post("/signup", async (req, res) => {
     });
 
     // Send verification email
-    await transporter.sendMail({
+    // await transporter.sendMail({
+    //   to: email,
+    //   subject: "Your Recipedia Verification Code",
+    //   html: `
+    //     <h1>Welcome to Recipedia!</h1>
+    //     <p>Here is your verification code:</p>
+    //     <h2>${verificationCode}</h2>
+    //     <p>This code will expire in 10 minutes.</p>
+    //   `,
+    // });
+    await resend.emails.send({
+      from: process.env.EMAIL_USER,
       to: email,
       subject: "Your Recipedia Verification Code",
       html: `
@@ -73,7 +87,6 @@ router.post("/signup", async (req, res) => {
         <p>This code will expire in 10 minutes.</p>
       `,
     });
-
     res.json({ msg: "Verification code sent. Please check your inbox." });
   } catch (err) {
     console.error("Signup error:", err);
@@ -139,16 +152,25 @@ router.post("/resend-code", async (req, res) => {
   pending.code = newCode;
   pending.expires = Date.now() + 10 * 60 * 1000;
 
-  await transporter.sendMail({
+  // await transporter.sendMail({
+  //   to: email,
+  //   subject: "Your new Recipedia verification code",
+  //   html: `
+  //     <h1>Here’s your new verification code:</h1>
+  //     <h2>${newCode}</h2>
+  //     <p>This code expires in 10 minutes.</p>
+  //   `,
+  // });
+  await resend.emails.send({
+    from: process.env.EMAIL_USER,
     to: email,
-    subject: "Your new Recipedia verification code",
+    subject: "Your Recipedia Verification Code",
     html: `
       <h1>Here’s your new verification code:</h1>
       <h2>${newCode}</h2>
       <p>This code expires in 10 minutes.</p>
     `,
   });
-
   res.json({ msg: "A new verification code has been sent to your email." });
 });
 
