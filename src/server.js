@@ -1,7 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-
+import swaggerJSDoc from "swagger-jsdoc";
+import swaggerui from "swagger-ui-express";
 import recipeRoutes from "./routes/recipeRoutes.js";
 // import userRoutes from "./routes/userRoutes.js";
 // import commentRoutes from "./routes/commentRoutes.js";
@@ -46,6 +47,31 @@ app.use("/api/recipes", recipeRoutes);
 // app.use("/api/comments", commentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/upload", uploadRoutes);
+
+// Swagger setup
+const options = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Recipedia's API Documents",
+      version: "0.1",
+      description: "API",
+      contact: {
+        name: "Huynh Quang Thinh",
+        email: "22521407@gm.uit.edu.vn",
+      },
+    },
+    servers: [
+      {
+        // url: "https://recipedia-backend-6gp7.onrender.com/",
+        url: "http://localhost:5001/",
+      },
+    ],
+  },
+  apis: ["./routes/*.js"],
+};
+const spacs = swaggerJSDoc(options);
+app.use("/api-docs", swaggerui.serve, swaggerui.setup(spacs));
 
 connectDB().then(() => {
   app.listen(PORT, () => {

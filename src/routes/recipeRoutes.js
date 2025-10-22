@@ -1,25 +1,17 @@
 import express from "express";
 import Recipe from "../models/Recipe.js";
 import authMiddleware from "../middleware/authMiddleware.js";
-import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-// Get all recipes (public)
-// router.get("/", async (_, res) => {
-//   try {
-//     const recipes = await Recipe.find()
-//       .populate("author", "name email")
-//       .sort({ createdAt: -1 });
-//     res.status(200).json(recipes);
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// });
-// GET /api/recipes?cookingTime=quick&dishType=starter&sort=liked
 router.get("/", async (req, res) => {
   try {
     const { cookingTime, dishType, sort } = req.query;
+
+    // pagination
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const skip = (page - 1) * limit;
 
     const filter = {};
     if (cookingTime) filter.cookingTime = cookingTime;
@@ -32,7 +24,8 @@ router.get("/", async (req, res) => {
     if (sort === "oldest") query = query.sort({ createdAt: 1 });
     if (sort === "liked") query = query.sort({ likes: -1 }); // assumes you track likes
 
-    const recipes = await query.exec();
+    const recipes = await query.skip(skip).limit(limit).exec();
+    // return plain array to avoid breaking existing client code
     res.json(recipes);
   } catch (error) {
     res.status(500).json({ message: error.message });
