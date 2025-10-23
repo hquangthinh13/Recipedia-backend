@@ -487,14 +487,24 @@ router.post("/login", async (req, res) => {
 
 // GET /api/auth/me
 router.get("/me", authMiddleware, async (req, res) => {
-  const user = await User.findById(req.user.id).select("-password");
-  if (!user) return res.status(404).json({ msg: "User not found" });
-  res.json({
-    id: user._id,
-    name: user.name,
-    email: user.email,
-    avatar: user.avatar,
-  });
+  try {
+    const user = await User.findById(req.user.id)
+      .select("-password")
+      .populate("favorites", "_id title coverImage"); // optional populate fields
+
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      favorites: user.favorites.map((fav) => fav._id), // return IDs only
+    });
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
 });
 // ===========================
 // PASSWORD RESET FLOW
