@@ -36,6 +36,7 @@ app.use(
       if (
         !origin ||
         origin.includes("onrender.com") ||
+        origin.includes("vercel.app") ||
         origin.includes("localhost")
       ) {
         callback(null, true);
@@ -61,7 +62,6 @@ app.use((req, res, next) => {
 });
 app.use("/api/recipes", recipeRoutes);
 // app.use("/api/users", userRoutes);
-// app.use("/api/comments", commentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/upload", uploadRoutes);
 
