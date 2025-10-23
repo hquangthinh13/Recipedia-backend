@@ -8,7 +8,11 @@ import recipeRoutes from "./routes/recipeRoutes.js";
 // import commentRoutes from "./routes/commentRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { connectDB } from "./config/db.js";
 
 import cookieParser from "cookie-parser";
@@ -22,19 +26,29 @@ const PORT = process.env.PORT || 5001;
 const allowedOrigins = [
   "http://localhost:5173", // local dev
   "https://recipedia-frontend-omega.vercel.app", // your Vercel frontend
+  "http://localhost:5001",
+  "https://recipedia-backend-6gp7.onrender.com",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (
+        !origin ||
+        origin.includes("onrender.com") ||
+        origin.includes("localhost")
+      ) {
         callback(null, true);
       } else {
+        console.warn("Blocked by CORS:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   })
 );
 
@@ -63,15 +77,20 @@ const options = {
     },
     servers: [
       {
-        // url: "https://recipedia-backend-6gp7.onrender.com/",
+        url: "https://recipedia-backend-6gp7.onrender.com/",
+        description: "Deployment server",
+      },
+      {
         url: "http://localhost:5001/",
+
+        description: "Development server",
       },
     ],
   },
-  apis: ["./routes/*.js"],
+  apis: [path.join(__dirname, "./routes/*.js")],
 };
-const spacs = swaggerJSDoc(options);
-app.use("/api-docs", swaggerui.serve, swaggerui.setup(spacs));
+const swaggerSpec = swaggerJSDoc(options);
+app.use("/api-docs", swaggerui.serve, swaggerui.setup(swaggerSpec));
 
 connectDB().then(() => {
   app.listen(PORT, () => {

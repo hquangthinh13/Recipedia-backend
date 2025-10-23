@@ -1,3 +1,287 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: User authentication and account management
+ */
+
+/**
+ * @swagger
+ * /api/auth/hello:
+ *   get:
+ *     summary: Test API connectivity
+ *     tags: [Auth]
+ *     description: Returns a simple "Hello World" message to verify the API is working.
+ *     responses:
+ *       200:
+ *         description: Success message
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ *               example: Hello World
+ */
+
+/**
+ * @swagger
+ * /api/auth/signup:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     description: Registers a new user and sends a verification code to their email.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: John Doe
+ *               email:
+ *                 type: string
+ *                 example: johndoe@example.com
+ *               password:
+ *                 type: string
+ *                 example: myStrongPassword123
+ *     responses:
+ *       200:
+ *         description: Verification code sent successfully.
+ *       400:
+ *         description: User already exists.
+ *       500:
+ *         description: Server error.
+ */
+
+/**
+ * @swagger
+ * /api/auth/verify-code:
+ *   post:
+ *     summary: Verify email code and create account
+ *     tags: [Auth]
+ *     description: Confirms the email verification code and creates the user's account if valid.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - code
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: johndoe@example.com
+ *               code:
+ *                 type: string
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: Email verified and account created successfully.
+ *       400:
+ *         description: Invalid or expired verification code.
+ *       500:
+ *         description: Server error.
+ */
+
+/**
+ * @swagger
+ * /api/auth/resend-code:
+ *   post:
+ *     summary: Resend email verification code
+ *     tags: [Auth]
+ *     description: Resends a new verification code for users who have already signed up but not verified yet.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: johndoe@example.com
+ *     responses:
+ *       200:
+ *         description: A new verification code was sent.
+ *       400:
+ *         description: No pending signup found.
+ */
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Authenticate user and return token
+ *     tags: [Auth]
+ *     description: Logs in a verified user and returns a JWT token.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: johndoe@example.com
+ *               password:
+ *                 type: string
+ *                 example: myStrongPassword123
+ *     responses:
+ *       200:
+ *         description: Successfully authenticated, returns JWT token.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *       400:
+ *         description: Invalid credentials or user does not exist.
+ *       401:
+ *         description: Email not verified.
+ */
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Retrieves information about the currently logged-in user.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user profile.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   example: 64bfe9c29a3b2a1234abc123
+ *                 name:
+ *                   type: string
+ *                   example: John Doe
+ *                 email:
+ *                   type: string
+ *                   example: johndoe@example.com
+ *                 avatar:
+ *                   type: string
+ *                   example: https://api.dicebear.com/9.x/micah/svg?seed=John
+ *       401:
+ *         description: Unauthorized or missing token.
+ *       404:
+ *         description: User not found.
+ */
+
+/**
+ * @swagger
+ * /api/auth/request-password-reset:
+ *   post:
+ *     summary: Request password reset
+ *     tags: [Auth]
+ *     description: Sends a password reset code to the user's email.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: johndoe@example.com
+ *     responses:
+ *       200:
+ *         description: Password reset code sent.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Server error.
+ */
+
+/**
+ * @swagger
+ * /api/auth/verify-reset-code:
+ *   post:
+ *     summary: Verify password reset code
+ *     tags: [Auth]
+ *     description: Verifies the reset code sent to the user's email before allowing password change.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - code
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: johndoe@example.com
+ *               code:
+ *                 type: string
+ *                 example: "654321"
+ *     responses:
+ *       200:
+ *         description: Reset code verified successfully.
+ *       400:
+ *         description: Invalid or expired code.
+ */
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset user password
+ *     tags: [Auth]
+ *     description: Allows a user with a verified reset code to set a new password.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - newPassword
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: johndoe@example.com
+ *               newPassword:
+ *                 type: string
+ *                 example: newStrongPassword123
+ *     responses:
+ *       200:
+ *         description: Password reset successfully.
+ *       400:
+ *         description: Verification required or invalid request.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Server error.
+ */
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";

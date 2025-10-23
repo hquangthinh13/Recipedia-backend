@@ -1,3 +1,214 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Recipes
+ *   description: API endpoints for managing recipes
+ */
+
+/**
+ * @swagger
+ * /api/recipes:
+ *   get:
+ *     summary: Get all recipes
+ *     tags: [Recipes]
+ *     description: Retrieve a paginated list of all recipes, with optional filtering and sorting.
+ *     parameters:
+ *       - in: query
+ *         name: cookingTime
+ *         schema:
+ *           type: string
+ *         description: Filter recipes by cooking time (e.g., "30 minutes")
+ *       - in: query
+ *         name: dishType
+ *         schema:
+ *           type: string
+ *         description: Filter recipes by dish type (e.g., "Dessert", "Main course")
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [newest, oldest, liked]
+ *         description: Sort recipes by newest, oldest, or most liked
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 20
+ *         description: Number of recipes per page (max 100)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Page number for pagination
+ *     responses:
+ *       200:
+ *         description: A list of recipes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:
+ *                     type: string
+ *                     example: 64bfa1d2e3456789abcdef12
+ *                   title:
+ *                     type: string
+ *                     example: Classic Chocolate Cake
+ *                   author:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                         example: John Doe
+ *                       email:
+ *                         type: string
+ *                         example: johndoe@example.com
+ *                   coverImage:
+ *                     type: string
+ *                     example: https://example.com/chocolate-cake.jpg
+ *                   cookingTime:
+ *                     type: string
+ *                     example: 45 minutes
+ *                   dishType:
+ *                     type: string
+ *                     example: Dessert
+ *                   ingredients:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     example: ["2 eggs", "1 cup flour", "1/2 cup sugar"]
+ *                   instructions:
+ *                     type: string
+ *                     example: Mix ingredients and bake for 30 minutes at 180°C.
+ *       500:
+ *         description: Server error
+ */
+
+/**
+ * @swagger
+ * /api/recipes:
+ *   post:
+ *     summary: Create a new recipe
+ *     tags: [Recipes]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Creates a new recipe. Requires authentication.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - ingredients
+ *               - instructions
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Fresh Mango Smoothie
+ *               coverImage:
+ *                 type: string
+ *                 example: https://example.com/mango-smoothie.jpg
+ *               cookingTime:
+ *                 type: string
+ *                 example: 10 minutes
+ *               dishType:
+ *                 type: string
+ *                 example: Beverage
+ *               ingredients:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["1 ripe mango", "1 cup milk", "ice cubes"]
+ *               instructions:
+ *                 type: string
+ *                 example: Blend all ingredients until smooth.
+ *     responses:
+ *       201:
+ *         description: Recipe created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   example: 64bfa1d2e3456789abcdef12
+ *                 title:
+ *                   type: string
+ *                   example: Fresh Mango Smoothie
+ *                 author:
+ *                   type: string
+ *                   example: 64bf9b7ca12bc9ef12345678
+ *       400:
+ *         description: Missing required fields
+ *       500:
+ *         description: Server error
+ */
+
+/**
+ * @swagger
+ * /api/recipes/{id}:
+ *   get:
+ *     summary: Get a recipe by ID
+ *     tags: [Recipes]
+ *     description: Retrieve detailed information about a specific recipe by its ID.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The recipe ID
+ *     responses:
+ *       200:
+ *         description: Recipe details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   example: 64bfa1d2e3456789abcdef12
+ *                 title:
+ *                   type: string
+ *                   example: Classic Chocolate Cake
+ *                 author:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: John Doe
+ *                     email:
+ *                       type: string
+ *                       example: johndoe@example.com
+ *                 coverImage:
+ *                   type: string
+ *                   example: https://example.com/chocolate-cake.jpg
+ *                 cookingTime:
+ *                   type: string
+ *                   example: 45 minutes
+ *                 dishType:
+ *                   type: string
+ *                   example: Dessert
+ *                 ingredients:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["2 eggs", "1 cup flour", "1/2 cup sugar"]
+ *                 instructions:
+ *                   type: string
+ *                   example: Mix ingredients and bake for 30 minutes at 180°C.
+ *       404:
+ *         description: Recipe not found
+ *       500:
+ *         description: Server error
+ */
 import express from "express";
 import Recipe from "../models/Recipe.js";
 import authMiddleware from "../middleware/authMiddleware.js";
