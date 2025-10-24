@@ -97,12 +97,28 @@ router.post("/verify-code", async (req, res) => {
       avatar: avatarUrl,
       isVerified: true,
     });
+
     await newUser.save();
 
     // Remove pending entry
     pendingVerifications.delete(email);
+    // ✅ Auto-login: generate JWT
+    const token = jwt.sign(
+      { id: newUser._id, email: newUser.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
-    res.json({ msg: "Email verified and account created successfully!" });
+    res.json({
+      msg: "Email verified and account created successfully!",
+      token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        avatar: newUser.avatar,
+      },
+    });
   } catch (err) {
     console.error("Verification error:", err);
     res.status(500).json({ msg: "Server error" });
