@@ -231,7 +231,7 @@ router.get("/", async (req, res) => {
     if (dishType) filter.dishType = dishType;
 
     let query = Recipe.find(filter)
-      .populate("author", "name email")
+      .populate("author", "name email avatar")
       .populate("likes", "_id");
 
     // Sorting
@@ -302,7 +302,7 @@ router.post("/", authMiddleware, async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const recipe = await Recipe.findById(req.params.id)
-      .populate("author", "name email")
+      .populate("author", "name email avatar")
       .populate("comments.user", "name avatar");
     if (!recipe) return res.status(404).json({ message: "Recipe not found" });
     res.json(recipe);
@@ -336,8 +336,8 @@ router.post("/:id/like", authMiddleware, async (req, res) => {
       recipe.likes.push(userId);
     }
 
+    recipe.likeCount = recipe.likes.length;
     await recipe.save();
-
     res.status(200).json({
       message: alreadyLiked ? "Recipe unliked" : "Recipe liked",
       likesCount: recipe.likes.length,
