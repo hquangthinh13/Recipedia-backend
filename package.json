@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/hquangthinh13/Recipedia-backend#readme",
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^1.41.3",
