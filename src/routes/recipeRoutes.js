@@ -236,8 +236,9 @@ router.get("/", async (req, res) => {
 
     // Sorting
     if (sort === "newest") query = query.sort({ createdAt: -1 });
-    if (sort === "oldest") query = query.sort({ createdAt: 1 });
-    if (sort === "liked") query = query.sort({ likes: -1 }); // assumes you track likes
+    else if (sort === "oldest") query = query.sort({ createdAt: 1 });
+    else if (sort === "liked") query = query.sort({ likeCount: -1 });
+    else query = query.sort({ createdAt: -1 }); // default fallback
 
     const recipes = await query.skip(skip).limit(limit).lean();
 

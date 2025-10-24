@@ -34,8 +34,13 @@ const recipeSchema = new mongoose.Schema(
     instructions: { type: String, required: true },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     comments: [commentSchema],
+    likeCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
+recipeSchema.pre("save", function (next) {
+  this.likeCount = this.likes.length;
+  next();
+});
 
 export default mongoose.model("Recipe", recipeSchema);
