@@ -22,29 +22,26 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware to parse JSON request bodies
 
-const allowedOrigins = [
-  "http://localhost:5173", // local dev
-  "https://recipedia-frontend-omega.vercel.app", // your Vercel frontend
-  "http://localhost:5001",
-  "https://recipedia-backend-6gp7.onrender.com",
-];
-
 app.use(
   cors({
     origin: function (origin, callback) {
+      const allowedOrigins = [
+        "https://recipedia-frontend-omega.vercel.app",
+        "https://recipedia-frontend-git-main-yourusername.vercel.app",
+        "http://localhost:5173", // or your local dev port
+      ];
+
       if (
         !origin ||
-        origin.includes("onrender.com") ||
-        origin.includes("vercel.app") ||
-        origin.includes("localhost")
+        allowedOrigins.some((allowed) => origin.startsWith(allowed))
       ) {
         callback(null, true);
       } else {
-        console.warn("Blocked by CORS:", origin);
+        console.warn("❌ Blocked by CORS:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
     preflightContinue: false,
