@@ -230,16 +230,30 @@ router.get("/", async (req, res) => {
     if (cookingTime) filter.cookingTime = cookingTime;
     if (dishType) filter.dishType = dishType;
 
-    let query = Recipe.find(filter).populate("author", "name email");
+    let query = Recipe.find(filter)
+      .populate("author", "name email")
+      .populate("likes", "_id");
 
     // Sorting
     if (sort === "newest") query = query.sort({ createdAt: -1 });
     if (sort === "oldest") query = query.sort({ createdAt: 1 });
     if (sort === "liked") query = query.sort({ likes: -1 }); // assumes you track likes
 
-    const recipes = await query.skip(skip).limit(limit).exec();
-    // return plain array to avoid breaking existing client code
-    res.json(recipes);
+    const recipes = await query.skip(skip).limit(limit).lean();
+
+    const userId = req.user?.id;
+    const response = recipes.map((r) => ({
+      ...r,
+      likedByUser: userId
+        ? r.likes.some(
+            (id) =>
+              id.toString() === userId.toString() ||
+              (id?._id && id._id.toString() === userId.toString())
+          )
+        : false,
+    }));
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
