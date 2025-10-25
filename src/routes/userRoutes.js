@@ -1,6 +1,7 @@
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
 import User from "../models/User.js";
+import Recipe from "../models/Recipe.js";
 
 const router = express.Router();
 
@@ -33,6 +34,26 @@ router.post("/avatar", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Error updating avatar:", error);
     res.status(500).json({ msg: "Server error updating avatar." });
+  }
+});
+
+// GET /api/users/:id/profile
+router.get("/:id/profile", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select("name email avatar createdAt")
+      .lean();
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const recipes = await Recipe.find({ author: req.params.id })
+      .populate("author likeCount", "name avatar")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({ user, recipes });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

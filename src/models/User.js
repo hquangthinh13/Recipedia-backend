@@ -16,8 +16,10 @@ const userSchema = new mongoose.Schema(
     isVerified: { type: Boolean, default: false },
     verificationCode: { type: String },
     verificationCodeExpires: { type: Date },
-
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Recipe" }], // list of favorite recipes
+    //
+    following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
