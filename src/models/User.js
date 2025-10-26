@@ -14,12 +14,12 @@ const userSchema = new mongoose.Schema(
     createdAt: { type: Date, default: Date.now },
     avatar: { type: String },
     isVerified: { type: Boolean, default: false },
-    verificationCode: { type: String },
-    verificationCodeExpires: { type: Date },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Recipe" }], // list of favorite recipes
     //
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    followingCount: { type: Number, default: 0 },
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    followersCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
