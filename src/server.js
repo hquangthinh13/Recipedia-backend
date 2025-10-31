@@ -5,7 +5,6 @@ import swaggerJSDoc from "swagger-jsdoc";
 import swaggerui from "swagger-ui-express";
 import recipeRoutes from "./routes/recipeRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
-import uploadRoutes from "./routes/uploadRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -21,7 +20,6 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Middleware to parse JSON request bodies
-
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -60,7 +58,6 @@ app.use((req, res, next) => {
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api/upload", uploadRoutes);
 
 // Swagger setup
 const options = {

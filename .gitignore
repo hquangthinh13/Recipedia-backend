@@ -1,3 +1,6 @@
 .env
 HelloWorld.js
 addFollowFields.js
+/node_modules
+package-lock.json
+.idea/

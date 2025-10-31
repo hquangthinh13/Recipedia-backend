@@ -1,222 +1,17 @@
-/**
- * @swagger
- * tags:
- *   name: Recipes
- *   description: API endpoints for managing recipes
- */
-
-/**
- * @swagger
- * /api/recipes:
- *   get:
- *     summary: Get all recipes
- *     tags: [Recipes]
- *     description: Retrieve a paginated list of all recipes, with optional filtering and sorting.
- *     parameters:
- *       - in: query
- *         name: cookingTime
- *         schema:
- *           type: string
- *         description: Filter recipes by cooking time (e.g., "30 minutes")
- *       - in: query
- *         name: dishType
- *         schema:
- *           type: string
- *         description: Filter recipes by dish type (e.g., "Dessert", "Main course")
- *       - in: query
- *         name: sort
- *         schema:
- *           type: string
- *           enum: [newest, oldest, liked]
- *         description: Sort recipes by newest, oldest, or most liked
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           example: 20
- *         description: Number of recipes per page (max 100)
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           example: 1
- *         description: Page number for pagination
- *     responses:
- *       200:
- *         description: A list of recipes
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   _id:
- *                     type: string
- *                     example: 64bfa1d2e3456789abcdef12
- *                   title:
- *                     type: string
- *                     example: Classic Chocolate Cake
- *                   author:
- *                     type: object
- *                     properties:
- *                       name:
- *                         type: string
- *                         example: John Doe
- *                       email:
- *                         type: string
- *                         example: johndoe@example.com
- *                   coverImage:
- *                     type: string
- *                     example: https://example.com/chocolate-cake.jpg
- *                   cookingTime:
- *                     type: string
- *                     example: 45 minutes
- *                   dishType:
- *                     type: string
- *                     example: Dessert
- *                   ingredients:
- *                     type: array
- *                     items:
- *                       type: string
- *                     example: ["2 eggs", "1 cup flour", "1/2 cup sugar"]
- *                   instructions:
- *                     type: string
- *                     example: Mix ingredients and bake for 30 minutes at 180°C.
- *       500:
- *         description: Server error
- */
-
-/**
- * @swagger
- * /api/recipes:
- *   post:
- *     summary: Create a new recipe
- *     tags: [Recipes]
- *     security:
- *       - bearerAuth: []
- *     description: Creates a new recipe. Requires authentication.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *               - ingredients
- *               - instructions
- *             properties:
- *               title:
- *                 type: string
- *                 example: Fresh Mango Smoothie
- *               coverImage:
- *                 type: string
- *                 example: https://example.com/mango-smoothie.jpg
- *               cookingTime:
- *                 type: string
- *                 example: 10 minutes
- *               dishType:
- *                 type: string
- *                 example: Beverage
- *               ingredients:
- *                 type: array
- *                 items:
- *                   type: string
- *                 example: ["1 ripe mango", "1 cup milk", "ice cubes"]
- *               instructions:
- *                 type: string
- *                 example: Blend all ingredients until smooth.
- *     responses:
- *       201:
- *         description: Recipe created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 _id:
- *                   type: string
- *                   example: 64bfa1d2e3456789abcdef12
- *                 title:
- *                   type: string
- *                   example: Fresh Mango Smoothie
- *                 author:
- *                   type: string
- *                   example: 64bf9b7ca12bc9ef12345678
- *       400:
- *         description: Missing required fields
- *       500:
- *         description: Server error
- */
-
-/**
- * @swagger
- * /api/recipes/{id}:
- *   get:
- *     summary: Get a recipe by ID
- *     tags: [Recipes]
- *     description: Retrieve detailed information about a specific recipe by its ID.
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: The recipe ID
- *     responses:
- *       200:
- *         description: Recipe details retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 _id:
- *                   type: string
- *                   example: 64bfa1d2e3456789abcdef12
- *                 title:
- *                   type: string
- *                   example: Classic Chocolate Cake
- *                 author:
- *                   type: object
- *                   properties:
- *                     name:
- *                       type: string
- *                       example: John Doe
- *                     email:
- *                       type: string
- *                       example: johndoe@example.com
- *                 coverImage:
- *                   type: string
- *                   example: https://example.com/chocolate-cake.jpg
- *                 cookingTime:
- *                   type: string
- *                   example: 45 minutes
- *                 dishType:
- *                   type: string
- *                   example: Dessert
- *                 ingredients:
- *                   type: array
- *                   items:
- *                     type: string
- *                   example: ["2 eggs", "1 cup flour", "1/2 cup sugar"]
- *                 instructions:
- *                   type: string
- *                   example: Mix ingredients and bake for 30 minutes at 180°C.
- *       404:
- *         description: Recipe not found
- *       500:
- *         description: Server error
- */
 import express from "express";
-import mongoose from "mongoose";
 import User from "../models/User.js";
 import Recipe from "../models/Recipe.js";
 import authMiddleware from "../middleware/authMiddleware.js";
+import multer from "multer";
+import sharp from "sharp";
+import cloudinary from "../config/cloudinary.js";
+import streamifier from "streamifier"; // for streaming buffer → cloudinary upload
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 
+// Get all recipes with optional filters, sorting, and pagination
 router.get("/", async (req, res) => {
   try {
     const { cookingTime, dishType, sort } = req.query;
@@ -259,46 +54,71 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+// Create new recipe: upload image + process + save recipe
+router.post(
+  "/",
+  authMiddleware,
+  upload.single("coverImage"),
+  async (req, res) => {
+    try {
+      const { title, cookingTime, dishType, ingredients, instructions } =
+        req.body;
+      if (!title || !ingredients || !instructions)
+        return res.status(400).json({ message: "Missing required fields" });
 
-// Create new recipe
-router.post("/", authMiddleware, async (req, res) => {
-  try {
-    console.log("Decoded user from token:", req.user); // 👀 check token payload
-    console.log("Incoming recipe data:", req.body); // 👀 check FE payload
+      // Process image with Sharp
+      const imageBuffer = await sharp(req.file.buffer)
+        .resize({ width: 1280, height: 720, fit: "cover" }) // 16:9 crop
+        .toFormat("jpeg")
+        .jpeg({ quality: 90 })
+        .toBuffer();
 
-    const {
-      title,
-      coverImage,
-      cookingTime,
-      dishType,
-      ingredients,
-      instructions,
-    } = req.body;
+      // Upload to Cloudinary using a stream
+      const uploadStream = () =>
+        new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: "recipes",
+              format: "jpeg",
+              transformation: [{ width: 1280, height: 720, crop: "fill" }],
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          streamifier.createReadStream(imageBuffer).pipe(stream);
+        });
 
-    if (!title || !ingredients || ingredients.length === 0) {
-      return res.status(400).json({ message: "Missing required fields" });
+      const cloudinaryResult = await uploadStream();
+
+      // Parse ingredients safely (if frontend sends JSON string)
+      const parsedIngredients =
+        typeof ingredients === "string" ? JSON.parse(ingredients) : ingredients;
+
+      // Save recipe to MongoDB
+      const recipe = await Recipe.create({
+        title,
+        author: req.user.id,
+        coverImage: cloudinaryResult.secure_url,
+        cookingTime,
+        dishType,
+        ingredients: parsedIngredients,
+        instructions,
+      });
+
+      res.status(201).json({
+        message: "Recipe created successfully",
+        recipe,
+      });
+    } catch (error) {
+      console.error("Error creating full recipe:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
     }
-
-    const newRecipe = new Recipe({
-      title,
-      author: req.user.id, // always taken from token
-      coverImage,
-      cookingTime,
-      dishType,
-      ingredients,
-      instructions,
-    });
-
-    await newRecipe.save();
-
-    res.status(201).json(newRecipe);
-  } catch (error) {
-    console.error("Error creating recipe:", error);
-    res.status(500).json({ message: error.message }); // return real error
   }
-});
+);
 
-// /api/recipes/:id
+// Get recipe by ID
 router.get("/:id", async (req, res) => {
   try {
     const recipe = await Recipe.findById(req.params.id)
@@ -310,6 +130,84 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+// Update a recipe
+router.put(
+  "/:id",
+  authMiddleware,
+  upload.single("coverImage"), // optional new image
+  async (req, res) => {
+    try {
+      const recipeId = req.params.id;
+      const userId = req.user.id;
+
+      // Fetch the recipe
+      const recipe = await Recipe.findById(recipeId);
+      if (!recipe) {
+        return res.status(404).json({ message: "Recipe not found" });
+      }
+
+      // Ensure the recipe belongs to the logged-in user
+      if (recipe.author.toString() !== userId.toString()) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const { title, cookingTime, dishType, ingredients, instructions } =
+        req.body;
+
+      // Optional new image handling
+      let coverImageUrl = recipe.coverImage;
+      if (req.file) {
+        // Process + upload to Cloudinary
+        const imageBuffer = await sharp(req.file.buffer)
+          .resize({ width: 1280, height: 720, fit: "cover" })
+          .toFormat("jpeg")
+          .jpeg({ quality: 90 })
+          .toBuffer();
+
+        const uploadStream = () =>
+          new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+              {
+                folder: "recipes",
+                format: "jpeg",
+                transformation: [{ width: 1280, height: 720, crop: "fill" }],
+              },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            );
+            streamifier.createReadStream(imageBuffer).pipe(stream);
+          });
+
+        const cloudinaryResult = await uploadStream();
+        coverImageUrl = cloudinaryResult.secure_url;
+      }
+
+      // Parse ingredients if JSON string
+      const parsedIngredients =
+        typeof ingredients === "string" ? JSON.parse(ingredients) : ingredients;
+
+      // Update fields
+      recipe.title = title || recipe.title;
+      recipe.cookingTime = cookingTime || recipe.cookingTime;
+      recipe.dishType = dishType || recipe.dishType;
+      recipe.ingredients = parsedIngredients || recipe.ingredients;
+      recipe.instructions = instructions || recipe.instructions;
+      recipe.coverImage = coverImageUrl;
+
+      const updatedRecipe = await recipe.save();
+
+      res.status(200).json({
+        message: "Recipe updated successfully",
+        recipe: updatedRecipe,
+      });
+    } catch (error) {
+      console.error("Error updating recipe:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
+    }
+  }
+);
 
 // Like or unlike a recipe
 router.post("/:id/like", authMiddleware, async (req, res) => {
@@ -348,6 +246,7 @@ router.post("/:id/like", authMiddleware, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
 // Add or remove a recipe from favorites
 router.post("/:id/favorite", authMiddleware, async (req, res) => {
   try {
@@ -393,7 +292,8 @@ router.post("/:id/favorite", authMiddleware, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-// POST /api/recipes/:id/comments
+
+// Comment on a recipe
 router.post("/:id/comments", authMiddleware, async (req, res) => {
   try {
     const recipeId = req.params.id;
@@ -437,6 +337,27 @@ router.post("/:id/comments", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Error adding comment:", error);
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// Delete a recipe
+router.delete("/:id", authMiddleware, async (req, res) => {
+  try {
+    const recipeId = req.params.id;
+    const userId = req.user.id;
+    const recipe = await Recipe.findById(recipeId);
+
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+    if (recipe.author.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+    await Recipe.findByIdAndDelete(recipeId);
+    res.status(200).json({ message: "Recipe deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting recipe:", error);
+    res.status(500).json({ message: error.message });
   }
 });
 export default router;
