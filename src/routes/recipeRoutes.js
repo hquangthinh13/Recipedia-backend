@@ -1,6 +1,8 @@
 import express from "express";
 import User from "../models/User.js";
 import Recipe from "../models/Recipe.js";
+import Notification from "../models/Notification.js";
+
 import authMiddleware from "../middleware/authMiddleware.js";
 import multer from "multer";
 import sharp from "sharp";
@@ -94,10 +96,6 @@ router.get("/trending", async (req, res) => {
       })
       .slice(0, n);
 
-    // res.status(200).json({
-    //   message: `Top ${n} trending recipes`,
-    //   data: trending,
-    // });
     res.status(200).json(trending);
   } catch (error) {
     console.error("Error fetching trending recipes:", error);
@@ -181,6 +179,7 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
 // Update a recipe
 router.put(
   "/:id",
@@ -283,6 +282,15 @@ router.post("/:id/like", authMiddleware, async (req, res) => {
     } else {
       // Like (add to likes)
       recipe.likes.push(userId);
+      // create notification
+      if (recipe.author.toString() !== userId.toString()) {
+        await Notification.create({
+          recipient: recipe.author,
+          sender: userId,
+          type: "like",
+          recipe: recipe._id,
+        });
+      }
     }
 
     recipe.likeCount = recipe.likes.length;
@@ -370,7 +378,15 @@ router.post("/:id/comments", authMiddleware, async (req, res) => {
     // Add to the recipe's comments array
     recipe.comments.push(newComment);
     await recipe.save();
-
+    if (recipe.author.toString() !== userId.toString()) {
+      await Notification.create({
+        recipient: recipe.author,
+        sender: userId,
+        type: "comment",
+        recipe: recipe._id,
+        commentText: text,
+      });
+    }
     // Optionally populate user info for the response
     const populatedRecipe = await recipe.populate({
       path: "comments.user",

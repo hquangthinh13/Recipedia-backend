@@ -3,7 +3,7 @@ import authMiddleware from "../middleware/authMiddleware.js";
 import optionalAuth from "../middleware/optionalAuth.js";
 import User from "../models/User.js";
 import Recipe from "../models/Recipe.js";
-
+import Notification from "../models/Notification.js";
 const router = express.Router();
 
 /**
@@ -119,9 +119,14 @@ router.post("/:id/follow", authMiddleware, async (req, res) => {
       targetUser.followersCount = Math.max(0, targetUser.followers.length);
       await currentUser.save();
       await targetUser.save();
-
+      // create follow notification
+      await Notification.create({
+        recipient: targetUserId,
+        sender: currentUserId,
+        type: "follow",
+      });
       return res.json({
-        msg: `✅ You are now following ${targetUser.name}.`,
+        msg: `You are now following ${targetUser.name}.`,
         isFollowing: true,
         followersCount: targetUser.followersCount,
       });
@@ -173,4 +178,27 @@ router.get("/:id/following", async (req, res) => {
     res.status(500).json({ msg: "Server error fetching following list." });
   }
 });
+
+router.get("/notifications", authMiddleware, async (req, res) => {
+  const userId = req.user._id || req.user.id;
+  const notifications = await Notification.find({ recipient: userId })
+    .populate("sender recipe")
+    .sort({ createdAt: -1 });
+  res.json(notifications);
+});
+
+// PATCH /notifications/mark-all-read
+router.patch(
+  "/notifications/mark-all-read",
+  authMiddleware,
+  async (req, res) => {
+    const userId = req.user._id || req.user.id; // same fix
+    await Notification.updateMany(
+      { recipient: userId, isRead: false },
+      { isRead: true }
+    );
+    res.json({ ok: true });
+  }
+);
+
 export default router;
