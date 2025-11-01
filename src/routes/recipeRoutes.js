@@ -54,6 +54,57 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// Get top trending recipes based on likes, comments, and recency
+router.get("/trending", async (req, res) => {
+  try {
+    const n = parseInt(req.query.n, 10) || 10; // number of recipes to return
+    const now = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 7);
+
+    // Step 1: Fetch all recipes
+    const recipes = await Recipe.find({})
+      .populate("author", "name avatar")
+      .lean();
+
+    // Step 2: Compute trend score dynamically
+    const trending = recipes
+      .map((recipe) => {
+        const likeCount = recipe.likeCount || 0;
+        const commentCount = recipe.comments?.length || 0;
+
+        // Recency boost: newer recipes get a small extra multiplier
+        const createdAt = new Date(recipe.createdAt);
+        const daysSince = (now - createdAt) / (1000 * 60 * 60 * 24);
+        const recencyBoost = daysSince <= 7 ? (7 - daysSince) * 1.5 : 0;
+
+        const trendScore = likeCount * 2 + commentCount * 1.5 + recencyBoost;
+
+        return {
+          ...recipe,
+          commentCount,
+          trendScore,
+        };
+      })
+      // Step 3: Sort by computed trend score, then by creation date
+      .sort((a, b) => {
+        if (b.trendScore !== a.trendScore) return b.trendScore - a.trendScore;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      })
+      .slice(0, n);
+
+    // res.status(200).json({
+    //   message: `Top ${n} trending recipes`,
+    //   data: trending,
+    // });
+    res.status(200).json(trending);
+  } catch (error) {
+    console.error("Error fetching trending recipes:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 // Create new recipe: upload image + process + save recipe
 router.post(
   "/",
