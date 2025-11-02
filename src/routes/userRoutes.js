@@ -201,4 +201,76 @@ router.patch(
   }
 );
 
+/**
+ * @route   GET /api/users/:id/interactions-summary
+ * @desc    Get daily like/comment totals for user's recipes
+ * @query   range=7|30|all
+ */
+router.get("/:id/interactions-summary", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { range } = req.query;
+
+    // Date filter
+    let startDate = null;
+    if (range === "7") {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+    } else if (range === "30") {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+    }
+
+    // Get all recipes authored by the user
+    const recipes = await Recipe.find({ author: userId }).select("_id");
+    if (!recipes.length) return res.json({ data: [] });
+
+    const recipeIds = recipes.map((r) => r._id);
+
+    // Match notifications for these recipes
+    const matchStage = {
+      recipe: { $in: recipeIds },
+      type: { $in: ["like", "comment"] },
+    };
+    if (startDate) matchStage.createdAt = { $gte: startDate };
+
+    const results = await Notification.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            type: "$type",
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.date",
+          likes: {
+            $sum: { $cond: [{ $eq: ["$_id.type", "like"] }, "$count", 0] },
+          },
+          comments: {
+            $sum: { $cond: [{ $eq: ["$_id.type", "comment"] }, "$count", 0] },
+          },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Format for frontend
+    const data = results.map((r) => ({
+      date: r._id,
+      likes: r.likes,
+      comments: r.comments,
+    }));
+
+    res.json({ data });
+  } catch (err) {
+    console.error("Error fetching interaction summary:", err);
+    res.status(500).json({ message: "Server error fetching summary" });
+  }
+});
+
 export default router;

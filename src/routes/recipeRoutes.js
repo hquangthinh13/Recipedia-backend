@@ -174,6 +174,8 @@ router.get("/:id", async (req, res) => {
       .populate("author", "name email avatar")
       .populate("comments.user", "name avatar");
     if (!recipe) return res.status(404).json({ message: "Recipe not found" });
+    // Sort comments by createdAt descending
+    recipe.comments.sort((a, b) => b.createdAt - a.createdAt);
     res.json(recipe);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -247,10 +249,14 @@ router.put(
       recipe.coverImage = coverImageUrl;
 
       const updatedRecipe = await recipe.save();
+      const populatedRecipe = await Recipe.findById(updatedRecipe._id).populate(
+        "author",
+        "name avatar _id"
+      ); // pick only needed fields
 
       res.status(200).json({
         message: "Recipe updated successfully",
-        recipe: updatedRecipe,
+        recipe: populatedRecipe,
       });
     } catch (error) {
       console.error("Error updating recipe:", error);

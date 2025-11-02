@@ -8,6 +8,7 @@ import sgMail from "@sendgrid/mail";
 
 dotenv.config();
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const pendingResets = new Map();
 
 const router = express.Router();
 // Temporary in-memory store for verification codes
