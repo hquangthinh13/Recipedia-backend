@@ -26,7 +26,8 @@ app.use(
       const allowedOrigins = [
         "https://recipedia-frontend-omega.vercel.app",
         "https://recipedia-frontend-git-main-yourusername.vercel.app",
-        "http://localhost:5173", // or your local dev port
+        "http://localhost:5173",
+        "http://localhost:5001",
       ];
 
       if (
@@ -59,32 +60,53 @@ app.use("/api/recipes", recipeRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 
-// Swagger setup
 const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Recipedia's API Documents",
-      version: "0.1",
-      description: "API",
+      title: "Recipedia API Documentation",
+      version: "1.0.0",
+      description: `Welcome to the **Recipedia API**, the backend service powering the Recipedia web application — your go-to platform for discovering, creating, and sharing delicious recipes from around the world.
+
+This API provides endpoints for managing users, recipes, and notifications. **bearerAuth:** eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZjhkM2UzMjc5ZmZiNjc5NGQ2ZGZkMyIsImVtYWlsIjoiaHF1YW5ndGhpbmgxM0BnbWFpbC5jb20iLCJpYXQiOjE3NjIxNzIzNTQsImV4cCI6MTc2MjE3NTk1NH0.aiHji-LxdNHN4IgkILJESHHNk_3zrJLT6wRKxsxRsc0
+- [Frontend](https://recipedia-frontend-omega.vercel.app)  
+- [Backend](https://recipedia-backend-6gp7.onrender.com)
+
+Use this documentation to explore available endpoints, test requests, and integrate with the Recipedia backend services seamlessly.`,
       contact: {
-        name: "Huynh Quang Thinh",
-        email: "22521407@gm.uit.edu.vn",
+        name: "Huynh Quang Thinh, Tran Tinh Dan Thanh",
+        email: "22521407@gm.uit.edu.vn, 22521368@gm.uit.edu.vn",
       },
     },
     servers: [
       {
         url: "https://recipedia-backend-6gp7.onrender.com/",
-        description: "Deployment server",
+        description: "Production server",
       },
       {
         url: "http://localhost:5001/",
-
         description: "Development server",
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
   },
-  apis: [path.join(__dirname, "./routes/*.js")],
+  apis: [
+    path.join(__dirname, "./routes/*.js"),
+    path.join(__dirname, "./docs/*.js"),
+  ],
 };
 const swaggerSpec = swaggerJSDoc(options);
 app.use("/api-docs", swaggerui.serve, swaggerui.setup(swaggerSpec));
