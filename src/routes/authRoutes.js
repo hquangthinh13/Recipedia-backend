@@ -41,11 +41,11 @@ const getDicebearAvatar = (seed) =>
  *             properties:
  *               name:
  *                 type: string
- *                 example: "John Doe"
+ *                 example: "Quang Thinh"
  *               email:
  *                 type: string
  *                 format: email
- *                 example: "john@example.com"
+ *                 example: "hquangthinh@example.com"
  *               password:
  *                 type: string
  *                 format: password
@@ -154,7 +154,7 @@ router.post("/signup", async (req, res) => {
  *                 type: string
  *                 format: email
  *                 description: The email address used during signup
- *                 example: "john@example.com"
+ *                 example: "hquangthinh@example.com"
  *               code:
  *                 type: string
  *                 description: The 6-digit verification code sent via email
@@ -182,10 +182,10 @@ router.post("/signup", async (req, res) => {
  *                       example: "64f9876543abcde21098"
  *                     name:
  *                       type: string
- *                       example: "John Doe"
+ *                       example: "Quang Thinh"
  *                     email:
  *                       type: string
- *                       example: "john@example.com"
+ *                       example: "hquangthinh@example.com"
  *                     avatar:
  *                       type: string
  *                       example: "https://api.dicebear.com/6.x/initials/svg?seed=John%20Doe"
@@ -291,7 +291,7 @@ router.post("/verify-code", async (req, res) => {
  *                 type: string
  *                 format: email
  *                 description: The email address used during signup
- *                 example: "john@example.com"
+ *                 example: "hquangthinh@example.com"
  *     responses:
  *       200:
  *         description: New verification code sent successfully
@@ -481,10 +481,14 @@ router.post("/login", async (req, res) => {
  *                   example: "64f9876543abcde21098"
  *                 name:
  *                   type: string
- *                   example: "John Doe"
+ *                   example: "Taylor Swift"
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2025-10-02T12:34:56.789Z"
  *                 email:
  *                   type: string
- *                   example: "john@example.com"
+ *                   example: "taylorswift@example.com"
  *                 avatar:
  *                   type: string
  *                   example: "https://api.dicebear.com/6.x/initials/svg?seed=John%20Doe"
@@ -540,6 +544,7 @@ router.get("/me", authMiddleware, async (req, res) => {
       name: user.name,
       email: user.email,
       avatar: user.avatar,
+      createdAt: user.createdAt,
       favorites: user.favorites.map((fav) => fav._id), // return IDs only
     });
   } catch (error) {
@@ -573,7 +578,7 @@ router.get("/me", authMiddleware, async (req, res) => {
  *                 type: string
  *                 format: email
  *                 description: The email address of the user requesting the password reset
- *                 example: "john@example.com"
+ *                 example: "hquangthinh@example.com"
  *     responses:
  *       200:
  *         description: Password reset code successfully sent
@@ -673,7 +678,7 @@ router.post("/request-password-reset", async (req, res) => {
  *                 type: string
  *                 format: email
  *                 description: The email address used for the password reset request
- *                 example: "john@example.com"
+ *                 example: "hquangthinh@example.com"
  *               code:
  *                 type: string
  *                 description: The 6-digit reset code sent to the user's email
@@ -759,7 +764,7 @@ router.post("/verify-reset-code", (req, res) => {
  *                 type: string
  *                 format: email
  *                 description: The email address associated with the account
- *                 example: "john@example.com"
+ *                 example: "thinh@example.com"
  *               newPassword:
  *                 type: string
  *                 format: password

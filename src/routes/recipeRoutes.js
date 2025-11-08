@@ -422,62 +422,75 @@ router.post(
  * /api/recipes/{id}:
  *   get:
  *     summary: Get a recipe by ID
- *     tags: [Recipes]
- *     description: >
- *       Retrieves a single recipe by its unique ID.
- *       The response includes populated author details (name, email, avatar) and comments (sorted by creation date, newest first).
+ *     description: Returns a single recipe. The `author` field is populated with `name`, `email`, and `avatar`.
+ *     tags:
+ *       - Recipes
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
+ *         description: MongoDB ObjectId of the recipe
  *         schema:
  *           type: string
- *         description: The unique ID of the recipe
- *         example: 6904a98d3c9e55a5d451b910
  *     responses:
  *       200:
- *         description: Successfully retrieved the recipe
+ *         description: Recipe found
  *         content:
  *           application/json:
  *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/Recipe'
- *                 - type: object
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   example: "690579f42359bf1739600adf"
+ *                 title:
+ *                   type: string
+ *                   example: "Spaghetti Bolognese"
+ *                 description:
+ *                   type: string
+ *                   example: "A hearty Italian classic with a rich meat sauce."
+ *                 ingredients:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example:
+ *                     - "200g spaghetti"
+ *                     - "150g minced beef"
+ *                     - "1 cup tomato sauce"
+ *                 steps:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example:
+ *                     - "Boil pasta until al dente."
+ *                     - "Brown the beef."
+ *                     - "Add sauce and simmer."
+ *                 coverImage:
+ *                   type: string
+ *                   format: uri
+ *                   example: "https://example.com/images/spaghetti.jpg"
+ *                 author:
+ *                   type: object
  *                   properties:
- *                     author:
- *                       type: object
- *                       properties:
- *                         name:
- *                           type: string
- *                           example: "John Doe"
- *                         email:
- *                           type: string
- *                           example: "john@example.com"
- *                         avatar:
- *                           type: string
- *                           example: "https://example.com/avatars/john.jpg"
- *                     comments:
- *                       type: array
- *                       description: List of comments sorted by newest first
- *                       items:
- *                         type: object
- *                         properties:
- *                           user:
- *                             type: object
- *                             properties:
- *                               name:
- *                                 type: string
- *                                 example: "Jane Smith"
- *                               avatar:
- *                                 type: string
- *                                 example: "https://example.com/avatars/jane.jpg"
- *                           text:
- *                             type: string
- *                             example: "This looks amazing!"
- *                           createdAt:
- *                             type: string
- *                             format: date-time
- *                             example: "2025-11-03T12:00:00.000Z"
+ *                     name:
+ *                       type: string
+ *                       example: "John Doe"
+ *                     email:
+ *                       type: string
+ *                       format: email
+ *                       example: "john@example.com"
+ *                     avatar:
+ *                       type: string
+ *                       format: uri
+ *                       example: "https://api.dicebear.com/9.x/micah/svg?seed=John%20Doe"
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2025-10-02T12:34:56.789Z"
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2025-10-03T09:21:00.123Z"
  *       404:
  *         description: Recipe not found
  *         content:
@@ -489,7 +502,7 @@ router.post(
  *                   type: string
  *                   example: "Recipe not found"
  *       500:
- *         description: Server error while retrieving recipe
+ *         description: Server error
  *         content:
  *           application/json:
  *             schema:
@@ -497,23 +510,318 @@ router.post(
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Internal server error"
+ *                   example: "Server error"
  */
 
 // Get recipe by ID
 router.get("/:id", async (req, res) => {
   try {
-    const recipe = await Recipe.findById(req.params.id)
-      .populate("author", "name email avatar")
-      .populate("comments.user", "name avatar");
+    const recipe = await Recipe.findById(req.params.id).populate(
+      "author",
+      "name email avatar"
+    );
     if (!recipe) return res.status(404).json({ message: "Recipe not found" });
-    // Sort comments by createdAt descending
-    recipe.comments.sort((a, b) => b.createdAt - a.createdAt);
     res.json(recipe);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+/**
+ * @swagger
+ * /api/recipes/{id}/comments:
+ *   get:
+ *     summary: Get paginated comments for a recipe
+ *     description: >
+ *       Returns a paginated list of comments for the specified recipe.
+ *       Supports sorting by newest (default) or oldest. Each comment's `user`
+ *       is "manually populated" with `name` and `avatar`.
+ *     tags:
+ *       - Recipes
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: MongoDB ObjectId of the recipe
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         description: Page number (1-based). Minimum is 1.
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         description: Number of comments per page (max 100).
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *       - in: query
+ *         name: sort
+ *         required: false
+ *         description: Sort order by creation time.
+ *         schema:
+ *           type: string
+ *           enum: [newest, oldest]
+ *           default: newest
+ *     responses:
+ *       200:
+ *         description: Paginated comments returned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 comments:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "671234abcd9012ef34567890"
+ *                       text:
+ *                         type: string
+ *                         example: "This recipe is amazing!"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-11-08T03:21:45.000Z"
+ *                       user:
+ *                         type: object
+ *                         description: Populated user subset
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             example: "66ff00aa11bb22cc33dd44ee"
+ *                           name:
+ *                             type: string
+ *                             example: "Jane Doe"
+ *                           avatar:
+ *                             type: string
+ *                             format: uri
+ *                             example: "https://api.dicebear.com/9.x/micah/svg?seed=Jane%20Doe"
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 limit:
+ *                   type: integer
+ *                   example: 10
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 3
+ *                 totalCount:
+ *                   type: integer
+ *                   example: 24
+ *                 sort:
+ *                   type: string
+ *                   enum: [newest, oldest]
+ *                   example: "newest"
+ *       404:
+ *         description: Recipe not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Recipe not found"
+ *       500:
+ *         description: Server error while fetching comments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Error message details"
+ */
+
+// GET /api/recipes/:id/comments?page=&limit=&sort=
+router.get("/:id/comments", async (req, res) => {
+  try {
+    const recipeId = req.params.id;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 10, 100);
+    const sort = req.query.sort === "oldest" ? "oldest" : "newest";
+
+    const recipe = await Recipe.findById(recipeId).select("comments").lean();
+    if (!recipe) return res.status(404).json({ message: "Recipe not found" });
+
+    // sort in-memory
+    const sorted =
+      sort === "oldest"
+        ? [...(recipe.comments || [])].sort(
+            (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+          )
+        : [...(recipe.comments || [])].sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          );
+
+    const totalCount = sorted.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+    const current = Math.min(page, totalPages);
+    const start = (current - 1) * limit;
+    const items = sorted.slice(start, start + limit);
+
+    // manual "populate" of comment.user (name, avatar)
+    const userIds = [
+      ...new Set(items.map((c) => c.user && c.user.toString()).filter(Boolean)),
+    ];
+    const users = await User.find({ _id: { $in: userIds } })
+      .select("name avatar")
+      .lean();
+    const userMap = Object.fromEntries(
+      users.map((u) => [
+        u._id.toString(),
+        { _id: u._id, name: u.name, avatar: u.avatar },
+      ])
+    );
+
+    const comments = items.map((c) => ({
+      _id: c._id,
+      text: c.text,
+      createdAt: c.createdAt,
+      user: userMap[c.user?.toString()] || c.user, // small safeguard
+    }));
+
+    res.json({
+      comments,
+      page: current,
+      limit,
+      totalPages,
+      totalCount,
+      sort,
+    });
+  } catch (error) {
+    console.error("Error fetching paginated comments:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+/**
+ * @swagger
+ * /api/recipes/{id}/comments/{commentId}:
+ *   delete:
+ *     summary: Delete a comment from a recipe
+ *     description: >
+ *       Deletes a specific comment from a recipe.
+ *       This action requires authentication and is only permitted if the authenticated user is the author of the comment.
+ *     tags:
+ *       - Recipes
+ *     security:
+ *       - bearerAuth: []   # Requires JWT authentication
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: MongoDB ObjectId of the recipe
+ *         schema:
+ *           type: string
+ *           example: "671234abcd9012ef34567890"
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         description: MongoDB ObjectId of the comment to delete
+ *         schema:
+ *           type: string
+ *           example: "671234abcd9012ef98765432"
+ *     responses:
+ *       200:
+ *         description: Comment deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment deleted"
+ *                 commentId:
+ *                   type: string
+ *                   example: "671234abcd9012ef98765432"
+ *                 totalCount:
+ *                   type: integer
+ *                   description: Remaining total number of comments in the recipe
+ *                   example: 12
+ *       403:
+ *         description: Forbidden — user not authorized to delete this comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not allowed to delete this comment"
+ *       404:
+ *         description: Recipe or comment not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found"
+ *       500:
+ *         description: Server error while deleting comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Delete comment failed: CastError"
+ */
+
+// DELETE /api/recipes/:id/comments/:commentId
+// Requires auth; only the comment owner can delete their comment.
+router.delete("/:id/comments/:commentId", authMiddleware, async (req, res) => {
+  try {
+    const { id: recipeId, commentId } = req.params;
+    const userId = req.user.id; // set by your verifyToken middleware
+
+    const recipe = await Recipe.findById(recipeId);
+    if (!recipe) return res.status(404).json({ message: "Recipe not found" });
+
+    const target = recipe.comments.id(commentId);
+    if (!target) return res.status(404).json({ message: "Comment not found" });
+
+    // ownership check (only comment author can delete)
+    if (String(target.user) !== String(userId)) {
+      return res
+        .status(403)
+        .json({ message: "Not allowed to delete this comment" });
+    }
+
+    target.deleteOne(); // remove the subdocument
+    await recipe.save();
+
+    return res.json({
+      message: "Comment deleted",
+      commentId,
+      totalCount: recipe.comments.length,
+    });
+  } catch (error) {
+    console.error("Delete comment failed:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 /**
  * @swagger
  * /api/recipes/{id}:
