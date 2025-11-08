@@ -25,7 +25,7 @@ app.use(
     origin: function (origin, callback) {
       const allowedOrigins = [
         "https://recipedia-frontend-omega.vercel.app",
-        "https://recipedia-frontend-git-main-yourusername.vercel.app",
+        "https://recipedia-backend-6gp7.onrender.com",
         "http://localhost:5173",
         "http://localhost:5001",
       ];
