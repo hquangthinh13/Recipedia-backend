@@ -20,7 +20,8 @@ const recipeSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    coverImage: { type: String }, // URL
+    coverImage: { type: String },
+    coverImagePublicId: { type: String },
     cookingTime: {
       type: String,
       enum: ["quick", "medium", "long", "veryLong"],

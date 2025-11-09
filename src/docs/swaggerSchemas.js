@@ -55,8 +55,8 @@
  *           format: date-time
  *       example:
  *         id: "64aef3e512345abc67890"
- *         name: "John Doe"
- *         email: "john@example.com"
+ *         name: "Huynh Thinh"
+ *         email: "hquangthinh@example.com"
  *         role: "user"
  *         avatar: "https://example.com/avatar.jpg"
  *         isVerified: true
@@ -124,6 +124,9 @@
  *         coverImage:
  *           type: string
  *           description: URL of the recipe cover image
+ *         coverImagePublicId:
+ *           type: string
+ *           description: The public ID of the image stored on Cloudinary
  *         cookingTime:
  *           type: string
  *           enum: [quick, medium, long, veryLong]

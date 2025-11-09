@@ -110,13 +110,24 @@ router.post("/signup", async (req, res) => {
     const msg = {
       to: email,
       from: "recipedia.co@gmail.com",
-      subject: "Your Recipedia Verification Code",
+      subject: `${verificationCode} is Your Recipedia Verification Code`,
       html: `
-        <h1>Welcome to Recipedia!</h1>
-        <p>Here is your verification code:</p>
-        <h2>${verificationCode}</h2>
-        <p>This code will expire in 10 minutes.</p>
-      `,
+  <html>
+    <head>
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
+    </head>
+    <body style="margin:0; padding:0; background-color:#ff7e5f;">
+      <div style="font-family: 'Outfit', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #ff7e5f, #feb47b); color: #3d3436; padding: 40px; border-radius: 16px; text-align: center; max-width: 500px; margin: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        <h1 style="color:#ffffff; margin-bottom:16px; font-weight:700;">Welcome to Recipedia!</h1>
+        <p style="color:#ffffff; font-size:16px; margin-bottom:8px; font-weight:400;">Here is your verification code:</p>
+        <div style="background:#ffffff; color:#3d3436; display:inline-block; padding:14px 28px; border-radius:14px; font-size:30px; font-weight:700; letter-spacing:3px; margin:16px 0;">
+          ${verificationCode}
+        </div>
+        <p style="color:#ffffff; font-size:15px; margin-top:10px;">This code will expire in <strong>10 minutes</strong>.</p>
+      </div>
+    </body>
+  </html>
+`,
     };
     try {
       await sgMail.send(msg);
@@ -345,10 +356,23 @@ router.post("/resend-code", async (req, res) => {
     from: "recipedia.co@gmail.com",
     subject: `${newCode} is your new Recipedia verification code`,
     html: `
-      <h1>Here’s your new verification code:</h1>
-      <h2>${newCode}</h2>
-      <p>This code expires in 10 minutes.</p>
-      `,
+    <html>
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
+      </head>
+      <body style="margin:0; padding:0; background-color:#ff7e5f;">
+        <div style="font-family: 'Outfit', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #ff7e5f, #feb47b); color: #3d3436; padding: 40px; border-radius: 16px; text-align: center; max-width: 500px; margin: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+          <h1 style="color: #ffffff; margin-bottom: 12px; font-weight: 600;">Here’s your new verification code:</h1>
+          <div style="background: #ffffff; color: #3d3436; display: inline-block; padding: 14px 28px; border-radius: 14px; font-size: 32px; font-weight: 700; letter-spacing: 3px; margin: 16px 0;">
+            ${newCode}
+          </div>
+          <p style="color: #ffffff; font-size: 15px; margin-top: 10px; font-weight: 400;">
+            This code expires in <strong>10 minutes</strong>.
+          </p>
+        </div>
+      </body>
+    </html>
+  `,
   };
   try {
     await sgMail.send(msg);

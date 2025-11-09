@@ -11,11 +11,9 @@ const userSchema = new mongoose.Schema(
     },
     password: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
-    createdAt: { type: Date, default: Date.now },
     avatar: { type: String },
     isVerified: { type: Boolean, default: false },
-    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Recipe" }], // list of favorite recipes
-    //
+    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Recipe" }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     followingCount: { type: Number, default: 0 },
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

@@ -267,15 +267,16 @@ router.get("/trending", async (req, res) => {
  * @swagger
  * /api/recipes:
  *   post:
- *     summary: Create a new recipe (with image upload and details)
- *     tags: [Recipes]
+ *     summary: Create a new recipe
  *     description: >
- *       Creates a new recipe with title, ingredients, instructions, and an optional cover image.
- *       The endpoint requires authentication (via `authMiddleware`) and processes the uploaded image using **Sharp** before storing it on **Cloudinary**.
- *
- *       The request must use `multipart/form-data` with fields for the recipe details and the image file.
+ *       Creates a new recipe entry.
+ *       Requires authentication and supports uploading an image file (`coverImage`).
+ *       The image is processed with Sharp and stored on Cloudinary.
+ *       The Cloudinary public_id is also stored for future management.
+ *     tags:
+ *       - Recipes
  *     security:
- *       - bearerAuth: []    # Requires JWT token
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -286,39 +287,52 @@ router.get("/trending", async (req, res) => {
  *               - title
  *               - ingredients
  *               - instructions
- *               - coverImage
  *             properties:
  *               title:
  *                 type: string
  *                 description: Recipe title
- *                 example: "Chocolate Cake"
+ *                 example: "Garlic Butter Shrimp"
  *               cookingTime:
  *                 type: string
  *                 enum: [quick, medium, long, veryLong]
- *                 description: Estimated cooking time
- *                 example: "long"
+ *                 example: "quick"
  *               dishType:
  *                 type: string
  *                 enum: [starter, main, side, dessert, drink]
- *                 description: Type of dish
- *                 example: "dessert"
+ *                 example: "main"
  *               ingredients:
- *                 type: string
- *                 description: >
- *                   JSON string representing an array of ingredients.
- *                   Example:
- *                   `[{"name": "Flour", "amount": 200, "measurement": "grams"}, {"name": "Eggs", "amount": 3}]`
+ *                 oneOf:
+ *                   - type: string
+ *                     description: >
+ *                       JSON string representing an array of ingredients.
+ *                       Example: `[{"name":"Eggs","quantity":"2","unit":""}]`
+ *                   - type: array
+ *                     items:
+ *                       $ref: '#/components/schemas/Ingredient'
  *               instructions:
  *                 type: string
- *                 description: Step-by-step instructions for preparing the recipe
- *                 example: "Mix ingredients and bake for 30 minutes at 180°C."
+ *                 description: Step-by-step cooking instructions
+ *                 example: "Melt butter in a pan, add garlic and shrimp..."
  *               coverImage:
  *                 type: string
  *                 format: binary
- *                 description: Image file for the recipe cover (JPEG or PNG)
+ *                 description: Optional image file for recipe cover
+ *           encoding:
+ *             title:
+ *               contentType: text/plain
+ *             cookingTime:
+ *               contentType: text/plain
+ *             dishType:
+ *               contentType: text/plain
+ *             ingredients:
+ *               contentType: text/plain
+ *             instructions:
+ *               contentType: text/plain
+ *             coverImage:
+ *               contentType: image/jpeg
  *     responses:
  *       201:
- *         description: Recipe successfully created
+ *         description: Recipe created successfully
  *         content:
  *           application/json:
  *             schema:
@@ -326,7 +340,7 @@ router.get("/trending", async (req, res) => {
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Recipe created successfully"
+ *                   example: Recipe created successfully
  *                 recipe:
  *                   $ref: '#/components/schemas/Recipe'
  *       400:
@@ -334,24 +348,22 @@ router.get("/trending", async (req, res) => {
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Missing required fields"
+ *               $ref: '#/components/schemas/Error'
+ *             examples:
+ *               missingFields:
+ *                 value:
+ *                   message: Missing required fields
  *       500:
- *         description: Server or Cloudinary upload error
+ *         description: Server error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Server error"
- *                 error:
- *                   type: string
- *                   example: "Cloudinary upload failed"
+ *               $ref: '#/components/schemas/Error'
+ *             examples:
+ *               serverError:
+ *                 value:
+ *                   message: Server error
+ *                   error: "Error creating full recipe: ..."
  */
 
 // Create new recipe: upload image + process + save recipe
@@ -401,6 +413,8 @@ router.post(
         title,
         author: req.user.id,
         coverImage: cloudinaryResult.secure_url,
+        coverImagePublicId: cloudinaryResult.public_id,
+
         cookingTime,
         dishType,
         ingredients: parsedIngredients,
@@ -710,34 +724,26 @@ router.get("/:id/comments", async (req, res) => {
 });
 /**
  * @swagger
- * /api/recipes/{id}/comments/{commentId}:
+ * /api/recipes/{id}:
  *   delete:
- *     summary: Delete a comment from a recipe
+ *     summary: Delete a recipe
  *     description: >
- *       Deletes a specific comment from a recipe.
- *       This action requires authentication and is only permitted if the authenticated user is the author of the comment.
+ *       Deletes a recipe owned by the authenticated user.
+ *       If the recipe has a Cloudinary image (`coverImagePublicId`), the server will attempt to delete it as well.
  *     tags:
  *       - Recipes
  *     security:
- *       - bearerAuth: []   # Requires JWT authentication
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         description: MongoDB ObjectId of the recipe
+ *         description: Recipe ID (MongoDB ObjectId)
  *         schema:
  *           type: string
- *           example: "671234abcd9012ef34567890"
- *       - in: path
- *         name: commentId
- *         required: true
- *         description: MongoDB ObjectId of the comment to delete
- *         schema:
- *           type: string
- *           example: "671234abcd9012ef98765432"
  *     responses:
  *       200:
- *         description: Comment deleted successfully
+ *         description: Recipe deleted successfully
  *         content:
  *           application/json:
  *             schema:
@@ -745,79 +751,95 @@ router.get("/:id/comments", async (req, res) => {
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Comment deleted"
- *                 commentId:
+ *                   example: Recipe deleted successfully
+ *                 recipeId:
  *                   type: string
- *                   example: "671234abcd9012ef98765432"
- *                 totalCount:
- *                   type: integer
- *                   description: Remaining total number of comments in the recipe
- *                   example: 12
+ *                   example: "665aa8c0a9b5b0c9c3779f42"
  *       403:
- *         description: Forbidden — user not authorized to delete this comment
+ *         description: Not allowed to delete this recipe (not the owner)
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Not allowed to delete this comment"
+ *               $ref: '#/components/schemas/Error'
+ *             examples:
+ *               forbidden:
+ *                 value:
+ *                   message: Not allowed to delete this recipe
  *       404:
- *         description: Recipe or comment not found
+ *         description: Recipe not found
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Comment not found"
+ *               $ref: '#/components/schemas/Error'
+ *             examples:
+ *               notFound:
+ *                 value:
+ *                   message: Recipe not found
  *       500:
- *         description: Server error while deleting comment
+ *         description: Server error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Server error"
- *                 error:
- *                   type: string
- *                   example: "Delete comment failed: CastError"
+ *               $ref: '#/components/schemas/Error'
+ *             examples:
+ *               serverError:
+ *                 value:
+ *                   message: Server error
+ *                   error: "Delete recipe failed: ..."
  */
 
-// DELETE /api/recipes/:id/comments/:commentId
-// Requires auth; only the comment owner can delete their comment.
-router.delete("/:id/comments/:commentId", authMiddleware, async (req, res) => {
+// DELETE /api/recipes/:id
+// Requires auth; only the recipe owner can delete
+router.delete("/:id", authMiddleware, async (req, res) => {
   try {
-    const { id: recipeId, commentId } = req.params;
-    const userId = req.user.id; // set by your verifyToken middleware
+    const recipeId = req.params.id;
+    const userId = req.user.id;
 
     const recipe = await Recipe.findById(recipeId);
     if (!recipe) return res.status(404).json({ message: "Recipe not found" });
 
-    const target = recipe.comments.id(commentId);
-    if (!target) return res.status(404).json({ message: "Comment not found" });
-
-    // ownership check (only comment author can delete)
-    if (String(target.user) !== String(userId)) {
+    // Ownership check
+    if (String(recipe.author) !== String(userId)) {
       return res
         .status(403)
-        .json({ message: "Not allowed to delete this comment" });
+        .json({ message: "Not allowed to delete this recipe" });
     }
 
-    target.deleteOne(); // remove the subdocument
-    await recipe.save();
+    // 1) Delete image from Cloudinary if we have the public_id
+    if (recipe.coverImagePublicId) {
+      try {
+        await cloudinary.uploader.destroy(recipe.coverImagePublicId, {
+          resource_type: "image",
+          invalidate: true, // purge CDN cache
+        });
+      } catch (e) {
+        // Log but don't block recipe deletion
+        console.error("Cloudinary destroy failed:", e);
+      }
+    } else if (recipe.coverImage) {
+      // Fallback: derive public_id from the URL if old records don't have it
+      const match = recipe.coverImage.match(
+        /\/upload\/(?:v\d+\/)?(.+?)\.(?:jpg|jpeg|png|gif|webp|svg)$/i
+      );
+      const derivedPublicId = match?.[1]; // e.g. "recipes/abc123"
+      if (derivedPublicId) {
+        try {
+          await cloudinary.uploader.destroy(derivedPublicId, {
+            resource_type: "image",
+            invalidate: true,
+          });
+        } catch (e) {
+          console.error("Cloudinary destroy (derived) failed:", e);
+        }
+      }
+    }
 
-    return res.json({
-      message: "Comment deleted",
-      commentId,
-      totalCount: recipe.comments.length,
-    });
+    // 2) Delete the recipe document
+    await recipe.deleteOne();
+
+    return res.json({ message: "Recipe deleted successfully", recipeId });
   } catch (error) {
-    console.error("Delete comment failed:", error);
+    console.error("Delete recipe failed:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
@@ -826,24 +848,25 @@ router.delete("/:id/comments/:commentId", authMiddleware, async (req, res) => {
  * @swagger
  * /api/recipes/{id}:
  *   put:
- *     summary: Update an existing recipe (with optional new image)
- *     tags: [Recipes]
+ *     summary: Update a recipe
  *     description: >
- *       Updates a recipe owned by the logged-in user.
- *       Allows updating title, cooking time, dish type, ingredients, instructions, and optionally the cover image.
- *       If a new image is uploaded, it will be processed using **Sharp** and stored on **Cloudinary**.
+ *       Updates a recipe owned by the authenticated user.
+ *       Accepts optional new cover image (multipart/form-data).
+ *       If a new image is uploaded, the server overwrites the existing Cloudinary asset
+ *       (when public_id exists) or uploads a new one and deletes the old image.
+ *     tags:
+ *       - Recipes
  *     security:
- *       - bearerAuth: []   # Requires JWT token
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
+ *         description: Recipe ID (MongoDB ObjectId)
  *         schema:
  *           type: string
- *         description: The unique ID of the recipe to update
- *         example: 6904a98d3c9e55a5d451b910
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         multipart/form-data:
  *           schema:
@@ -851,34 +874,48 @@ router.delete("/:id/comments/:commentId", authMiddleware, async (req, res) => {
  *             properties:
  *               title:
  *                 type: string
- *                 description: Updated recipe title
- *                 example: "Creamy Alfredo Pasta"
+ *                 description: Recipe title
  *               cookingTime:
  *                 type: string
  *                 enum: [quick, medium, long, veryLong]
- *                 description: Updated cooking duration
- *                 example: "medium"
+ *                 description: Estimated time category
  *               dishType:
  *                 type: string
  *                 enum: [starter, main, side, dessert, drink]
- *                 description: Updated dish type
- *                 example: "main"
+ *                 description: Dish category
  *               ingredients:
- *                 type: string
- *                 description: >
- *                   JSON string representing the updated ingredient list.
- *                   Example: `[{"name": "Pasta", "amount": 200, "measurement": "grams"}]`
+ *                 oneOf:
+ *                   - type: string
+ *                     description: >
+ *                       JSON string representing an array of ingredients.
+ *                       Example:
+ *                       `[{"name":"Eggs","quantity":"2","unit":""}]`
+ *                   - type: array
+ *                     items:
+ *                       $ref: '#/components/schemas/Ingredient'
  *               instructions:
  *                 type: string
- *                 description: Updated cooking instructions
- *                 example: "Boil pasta, prepare sauce, mix and serve hot."
+ *                 description: Cooking instructions
  *               coverImage:
  *                 type: string
  *                 format: binary
- *                 description: Optional new image file for the recipe cover
+ *                 description: Optional image file to replace the current cover
+ *           encoding:
+ *             title:
+ *               contentType: text/plain
+ *             cookingTime:
+ *               contentType: text/plain
+ *             dishType:
+ *               contentType: text/plain
+ *             ingredients:
+ *               contentType: text/plain
+ *             instructions:
+ *               contentType: text/plain
+ *             coverImage:
+ *               contentType: image/jpeg
  *     responses:
  *       200:
- *         description: Recipe successfully updated
+ *         description: Recipe updated successfully
  *         content:
  *           application/json:
  *             schema:
@@ -886,64 +923,112 @@ router.delete("/:id/comments/:commentId", authMiddleware, async (req, res) => {
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Recipe updated successfully"
+ *                   example: Recipe updated successfully
  *                 recipe:
- *                   allOf:
- *                     - $ref: '#/components/schemas/Recipe'
- *                     - type: object
- *                       properties:
- *                         author:
- *                           type: object
- *                           properties:
- *                             name:
- *                               type: string
- *                               example: "John Doe"
- *                             avatar:
- *                               type: string
- *                               example: "https://example.com/avatar.jpg"
+ *                   $ref: '#/components/schemas/Recipe'
  *       400:
- *         description: Bad request or missing required fields
+ *         description: Missing or invalid fields
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Missing required fields"
+ *               $ref: '#/components/schemas/Error'
  *       403:
- *         description: Unauthorized — user does not own the recipe
+ *         description: Unauthorized (not the owner)
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Unauthorized"
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: Recipe not found
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Recipe not found"
+ *               $ref: '#/components/schemas/Error'
  *       500:
- *         description: Server or Cloudinary error
+ *         description: Server error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Server error"
- *                 error:
- *                   type: string
- *                   example: "Cloudinary upload failed"
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *   schemas:
+ *     Ingredient:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *           example: "Eggs"
+ *         quantity:
+ *           type: string
+ *           example: "2"
+ *         unit:
+ *           type: string
+ *           example: ""
+ *       required: [name]
+ *     UserSummary:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           example: "665aa8b2a9b5b0c9c3779f11"
+ *         name:
+ *           type: string
+ *           example: "Minh Anh"
+ *         avatar:
+ *           type: string
+ *           example: "https://cdn.example.com/avatar.jpg"
+ *     Recipe:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *         title:
+ *           type: string
+ *         author:
+ *           $ref: '#/components/schemas/UserSummary'
+ *         coverImage:
+ *           type: string
+ *           format: uri
+ *         coverImagePublicId:
+ *           type: string
+ *           description: Cloudinary public_id used for overwrite/delete
+ *         cookingTime:
+ *           type: string
+ *           enum: [quick, medium, long, veryLong]
+ *         dishType:
+ *           type: string
+ *           enum: [starter, main, side, dessert, drink]
+ *         ingredients:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Ingredient'
+ *         instructions:
+ *           type: string
+ *         likeCount:
+ *           type: integer
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *     Error:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *         error:
+ *           type: string
+ *           nullable: true
  */
 
 // Update a recipe
@@ -956,71 +1041,112 @@ router.put(
       const recipeId = req.params.id;
       const userId = req.user.id;
 
-      // Fetch the recipe
       const recipe = await Recipe.findById(recipeId);
-      if (!recipe) {
-        return res.status(404).json({ message: "Recipe not found" });
-      }
+      if (!recipe) return res.status(404).json({ message: "Recipe not found" });
 
-      // Ensure the recipe belongs to the logged-in user
-      if (recipe.author.toString() !== userId.toString()) {
+      // Ownership
+      if (String(recipe.author) !== String(userId)) {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
       const { title, cookingTime, dishType, ingredients, instructions } =
         req.body;
 
-      // Optional new image handling
-      let coverImageUrl = recipe.coverImage;
+      // Handle optional new image
+      let newCoverUrl = recipe.coverImage;
+      let newPublicId = recipe.coverImagePublicId;
+
       if (req.file) {
-        // Process + upload to Cloudinary
+        // Pre-process with Sharp (16:9, jpeg)
         const imageBuffer = await sharp(req.file.buffer)
           .resize({ width: 1280, height: 720, fit: "cover" })
           .toFormat("jpeg")
           .jpeg({ quality: 90 })
           .toBuffer();
 
-        const uploadStream = () =>
-          new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-              {
-                folder: "recipes",
-                format: "jpeg",
-                transformation: [{ width: 1280, height: 720, crop: "fill" }],
-              },
-              (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-              }
-            );
-            streamifier.createReadStream(imageBuffer).pipe(stream);
-          });
+        // If we already have a public_id, overwrite in place (best for keeping same ID)
+        if (recipe.coverImagePublicId) {
+          const uploadStream = () =>
+            new Promise((resolve, reject) => {
+              const stream = cloudinary.uploader.upload_stream(
+                {
+                  public_id: recipe.coverImagePublicId, // overwrite same asset
+                  overwrite: true,
+                  invalidate: true,
+                  resource_type: "image",
+                  // Optional: keep a stored original with same size (you already resized with Sharp)
+                  folder: undefined, // not needed when public_id is full path
+                  format: "jpeg",
+                },
+                (error, result) => (error ? reject(error) : resolve(result))
+              );
+              streamifier.createReadStream(imageBuffer).pipe(stream);
+            });
 
-        const cloudinaryResult = await uploadStream();
-        coverImageUrl = cloudinaryResult.secure_url;
+          const result = await uploadStream();
+          newCoverUrl = result.secure_url; // will include new version (v###)
+          newPublicId = result.public_id; // stays the same as before
+        } else {
+          // No stored public_id (legacy docs). Upload new, then delete old by deriving public_id.
+          const uploadStream = () =>
+            new Promise((resolve, reject) => {
+              const stream = cloudinary.uploader.upload_stream(
+                {
+                  folder: "recipes",
+                  format: "jpeg",
+                  resource_type: "image",
+                },
+                (error, result) => (error ? reject(error) : resolve(result))
+              );
+              streamifier.createReadStream(imageBuffer).pipe(stream);
+            });
+
+          const result = await uploadStream();
+          newCoverUrl = result.secure_url;
+          newPublicId = result.public_id;
+
+          // Try to delete the old one by deriving public_id from URL
+          if (recipe.coverImage) {
+            const match = recipe.coverImage.match(
+              /\/upload\/(?:v\d+\/)?(.+?)\.(?:jpg|jpeg|png|gif|webp|svg)$/i
+            );
+            const oldPublicId = match?.[1]; // e.g. "recipes/abc123"
+            if (oldPublicId) {
+              try {
+                await cloudinary.uploader.destroy(oldPublicId, {
+                  resource_type: "image",
+                  invalidate: true,
+                });
+              } catch (e) {
+                console.error("Cloudinary destroy (derived) failed:", e);
+              }
+            }
+          }
+        }
       }
 
       // Parse ingredients if JSON string
       const parsedIngredients =
         typeof ingredients === "string" ? JSON.parse(ingredients) : ingredients;
 
-      // Update fields
-      recipe.title = title || recipe.title;
-      recipe.cookingTime = cookingTime || recipe.cookingTime;
-      recipe.dishType = dishType || recipe.dishType;
-      recipe.ingredients = parsedIngredients || recipe.ingredients;
-      recipe.instructions = instructions || recipe.instructions;
-      recipe.coverImage = coverImageUrl;
+      // Apply updates (only overwrite if provided)
+      if (title) recipe.title = title;
+      if (cookingTime) recipe.cookingTime = cookingTime;
+      if (dishType) recipe.dishType = dishType;
+      if (parsedIngredients) recipe.ingredients = parsedIngredients;
+      if (instructions) recipe.instructions = instructions;
+      recipe.coverImage = newCoverUrl;
+      recipe.coverImagePublicId = newPublicId; // keep/attach public_id for future deletes
 
-      const updatedRecipe = await recipe.save();
-      const populatedRecipe = await Recipe.findById(updatedRecipe._id).populate(
+      const updated = await recipe.save();
+      const populated = await Recipe.findById(updated._id).populate(
         "author",
         "name avatar _id"
-      ); // pick only needed fields
+      );
 
       res.status(200).json({
         message: "Recipe updated successfully",
-        recipe: populatedRecipe,
+        recipe: populated,
       });
     } catch (error) {
       console.error("Error updating recipe:", error);
@@ -1028,6 +1154,7 @@ router.put(
     }
   }
 );
+
 /**
  * @swagger
  * /api/recipes/{id}/like:
