@@ -724,6 +724,281 @@ router.get("/:id/comments", async (req, res) => {
 });
 /**
  * @swagger
+ * /api/recipes/{id}/comments:
+ *   post:
+ *     summary: Add a comment to a recipe
+ *     tags: [Recipes]
+ *     description: >
+ *       Allows an authenticated user to post a comment on a recipe.
+ *       A notification is automatically created for the recipe author (unless the commenter is the author).
+ *       The endpoint returns the newly added comment with populated user info.
+ *     security:
+ *       - bearerAuth: []   # Requires JWT token
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the recipe to comment on
+ *         example: 64f1234567abcde89012
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - text
+ *             properties:
+ *               text:
+ *                 type: string
+ *                 description: The text content of the comment
+ *                 example: "This looks amazing! Can't wait to try it."
+ *     responses:
+ *       201:
+ *         description: Comment successfully added
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment added successfully."
+ *                 comment:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         name:
+ *                           type: string
+ *                           example: "Jane Smith"
+ *                         avatar:
+ *                           type: string
+ *                           example: "https://example.com/avatars/jane.jpg"
+ *                     text:
+ *                       type: string
+ *                       example: "This looks delicious!"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-11-03T12:00:00.000Z"
+ *       400:
+ *         description: Comment text missing or empty
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment text is required."
+ *       401:
+ *         description: Unauthorized — missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 msg:
+ *                   type: string
+ *                   example: "No token, authorization denied"
+ *       404:
+ *         description: Recipe not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Recipe not found."
+ *       500:
+ *         description: Server error while adding comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Database connection failed"
+ */
+
+// Comment on a recipe
+router.post("/:id/comments", authMiddleware, async (req, res) => {
+  try {
+    const recipeId = req.params.id;
+    const userId = req.user.id;
+    const { text } = req.body;
+
+    if (!text || text.trim() === "") {
+      return res.status(400).json({ message: "Comment text is required." });
+    }
+
+    const recipe = await Recipe.findById(recipeId);
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found." });
+    }
+
+    // Create comment
+    const newComment = {
+      user: userId,
+      text: text.trim(),
+      createdAt: new Date(),
+    };
+
+    // Add to the recipe's comments array
+    recipe.comments.push(newComment);
+    await recipe.save();
+    if (recipe.author.toString() !== userId.toString()) {
+      await Notification.create({
+        recipient: recipe.author,
+        sender: userId,
+        type: "comment",
+        recipe: recipe._id,
+        commentText: text,
+      });
+    }
+    // Optionally populate user info for the response
+    const populatedRecipe = await recipe.populate({
+      path: "comments.user",
+      select: "name avatar",
+    });
+
+    // Get the last comment (the one we just added)
+    const addedComment =
+      populatedRecipe.comments[populatedRecipe.comments.length - 1];
+
+    res.status(201).json({
+      message: "Comment added successfully.",
+      comment: addedComment,
+    });
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+/**
+ * @swagger
+ * /api/recipes/{id}/comments/{commentId}:
+ *   delete:
+ *     summary: Delete a comment from a recipe
+ *     description: >
+ *       Deletes a specific comment from a recipe.
+ *       This action requires authentication and is only permitted if the authenticated user is the author of the comment.
+ *     tags:
+ *       - Recipes
+ *     security:
+ *       - bearerAuth: []   # Requires JWT authentication
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: MongoDB ObjectId of the recipe
+ *         schema:
+ *           type: string
+ *           example: "671234abcd9012ef34567890"
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         description: MongoDB ObjectId of the comment to delete
+ *         schema:
+ *           type: string
+ *           example: "671234abcd9012ef98765432"
+ *     responses:
+ *       200:
+ *         description: Comment deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment deleted"
+ *                 commentId:
+ *                   type: string
+ *                   example: "671234abcd9012ef98765432"
+ *                 totalCount:
+ *                   type: integer
+ *                   description: Remaining total number of comments in the recipe
+ *                   example: 12
+ *       403:
+ *         description: Forbidden — user not authorized to delete this comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not allowed to delete this comment"
+ *       404:
+ *         description: Recipe or comment not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found"
+ *       500:
+ *         description: Server error while deleting comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Delete comment failed: CastError"
+ */
+
+// DELETE /api/recipes/:id/comments/:commentId
+// Requires auth; only the comment owner can delete their comment.
+router.delete("/:id/comments/:commentId", authMiddleware, async (req, res) => {
+  try {
+    const { id: recipeId, commentId } = req.params;
+    const userId = req.user.id; // set by your verifyToken middleware
+
+    const recipe = await Recipe.findById(recipeId);
+    if (!recipe) return res.status(404).json({ message: "Recipe not found" });
+
+    const target = recipe.comments.id(commentId);
+    if (!target) return res.status(404).json({ message: "Comment not found" });
+
+    // ownership check (only comment author can delete)
+    if (String(target.user) !== String(userId)) {
+      return res
+        .status(403)
+        .json({ message: "Not allowed to delete this comment" });
+    }
+
+    target.deleteOne(); // remove the subdocument
+    await recipe.save();
+
+    return res.json({
+      message: "Comment deleted",
+      commentId,
+      totalCount: recipe.comments.length,
+    });
+  } catch (error) {
+    console.error("Delete comment failed:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+/**
+ * @swagger
  * /api/recipes/{id}:
  *   delete:
  *     summary: Delete a recipe
@@ -1552,97 +1827,5 @@ router.post("/:id/comments", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-/**
- * @swagger
- * /api/recipes/{id}:
- *   delete:
- *     summary: Delete a recipe
- *     tags: [Recipes]
- *     description: >
- *       Deletes a recipe by its ID.
- *       Only the authenticated user who created the recipe can delete it.
- *       Requires a valid JWT token for authorization.
- *     security:
- *       - bearerAuth: []   # Requires JWT token
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the recipe to delete
- *         example: 64f1234567abcde89012
- *     responses:
- *       200:
- *         description: Recipe successfully deleted
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Recipe deleted successfully"
- *       401:
- *         description: Unauthorized — missing or invalid token
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 msg:
- *                   type: string
- *                   example: "No token, authorization denied"
- *       403:
- *         description: Forbidden — user is not the author of the recipe
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Unauthorized"
- *       404:
- *         description: Recipe not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Recipe not found"
- *       500:
- *         description: Server error while deleting recipe
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
- */
 
-// Delete a recipe
-router.delete("/:id", authMiddleware, async (req, res) => {
-  try {
-    const recipeId = req.params.id;
-    const userId = req.user.id;
-    const recipe = await Recipe.findById(recipeId);
-
-    if (!recipe) {
-      return res.status(404).json({ message: "Recipe not found" });
-    }
-    if (recipe.author.toString() !== userId.toString()) {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
-    await Recipe.findByIdAndDelete(recipeId);
-    res.status(200).json({ message: "Recipe deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting recipe:", error);
-    res.status(500).json({ message: error.message });
-  }
-});
 export default router;

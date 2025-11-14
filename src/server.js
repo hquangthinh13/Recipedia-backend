@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import morgan from "morgan";
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerui from "swagger-ui-express";
 import recipeRoutes from "./routes/recipeRoutes.js";
@@ -18,6 +19,8 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+app.use(morgan("short"));
 
 // Middleware to parse JSON request bodies
 app.use(
@@ -52,10 +55,6 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  next();
-});
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);

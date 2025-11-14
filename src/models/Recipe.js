@@ -8,7 +8,7 @@ const commentSchema = new mongoose.Schema({
 
 const ingredientSchema = new mongoose.Schema({
   name: { type: String, trim: true, required: true },
-  amount: { type: Number, required: true },
+  amount: { type: Number, required: true, min: 0 },
   measurement: { type: String, trim: true },
 });
 
@@ -20,16 +20,18 @@ const recipeSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    coverImage: { type: String },
+    coverImage: { type: String, required: true },
     coverImagePublicId: { type: String },
     cookingTime: {
       type: String,
       enum: ["quick", "medium", "long", "veryLong"],
       default: "medium",
+      required: true,
     },
     dishType: {
       type: String,
       enum: ["starter", "main", "side", "dessert", "drink"],
+      required: true,
     },
     ingredients: { type: [ingredientSchema], required: true },
     instructions: { type: String, required: true },
