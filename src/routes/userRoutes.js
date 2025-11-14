@@ -270,7 +270,8 @@ router.get("/:id/profile", optionalAuth, async (req, res) => {
       .populate({
         path: "favorites",
         select:
-          "title coverImage cookingTime dishType likeCount createdAt author",
+          "title coverImage cookingTime dishType likeCount createdAt author ingredients instructions",
+        options: { sort: { createdAt: -1 } },
         populate: { path: "author", select: "name avatar" },
       })
       .lean();
@@ -572,7 +573,7 @@ router.post("/:id/follow", authMiddleware, async (req, res) => {
         followersCount: targetUser.followersCount,
       });
     } else {
-      // 🔺 Follow
+      // Follow
       currentUser.following.push(targetUserId);
       targetUser.followers.push(currentUserId);
       // Update counts
@@ -768,16 +769,27 @@ router.get("/:id/following", async (req, res) => {
  * @swagger
  * /api/users/notifications:
  *   get:
- *     summary: Get all notifications for the authenticated user
- *     tags: [Notifications]
- *     description: >
- *       Retrieves a list of notifications for the logged-in user, ordered by creation date (most recent first).
- *       Each notification includes information about the sender, related recipe, and the type of action (like, comment, follow).
+ *     summary: Get all notifications for the authenticated user (paginated)
+ *     tags:
+ *       - Notifications
  *     security:
- *       - bearerAuth: []   # Requires JWT token
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Number of notifications per page (max 100)
  *     responses:
  *       200:
- *         description: Successfully retrieved user notifications
+ *         description: List of notifications
  *         content:
  *           application/json:
  *             schema:
@@ -787,78 +799,60 @@ router.get("/:id/following", async (req, res) => {
  *                 properties:
  *                   _id:
  *                     type: string
- *                     example: "65fd8a7b2e9c1a0012d4b123"
- *                   recipient:
- *                     type: string
- *                     example: "68fb8861bc0250763766965c"
- *                   sender:
- *                     type: object
- *                     description: The user who triggered the notification
- *                     properties:
- *                       _id:
- *                         type: string
- *                         example: "64f9876543abcde21098"
- *                       name:
- *                         type: string
- *                         example: "John Doe"
- *                       avatar:
- *                         type: string
- *                         example: "https://cdn.recipedia.com/avatars/john_doe.jpg"
- *                   recipe:
- *                     type: object
- *                     nullable: true
- *                     description: Related recipe (if applicable)
- *                     properties:
- *                       _id:
- *                         type: string
- *                         example: "64fabcd1234e56789abc"
- *                       title:
- *                         type: string
- *                         example: "Spaghetti Carbonara"
- *                       coverImage:
- *                         type: string
- *                         example: "https://cdn.recipedia.com/recipes/carbonara.jpg"
  *                   type:
  *                     type: string
- *                     description: Type of notification (like, comment, follow)
  *                     example: "like"
- *                   commentText:
- *                     type: string
- *                     nullable: true
- *                     description: Comment content (if the type is 'comment')
- *                     example: "Looks delicious!"
+ *                   sender:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       avatar:
+ *                         type: string
+ *                   recipe:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       coverImage:
+ *                         type: string
+ *                   isRead:
+ *                     type: boolean
  *                   createdAt:
  *                     type: string
  *                     format: date-time
- *                     example: "2025-02-05T14:20:00.000Z"
  *       401:
- *         description: Unauthorized — missing or invalid JWT token
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 msg:
- *                   type: string
- *                   example: "No token, authorization denied"
+ *         description: Unauthorized - missing or invalid token
  *       500:
- *         description: Server error while fetching notifications
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 msg:
- *                   type: string
- *                   example: "Server error fetching notifications"
+ *         description: Internal server error
  */
 
+// Get notifications with pagination
 router.get("/notifications", authMiddleware, async (req, res) => {
-  const userId = req.user._id || req.user.id;
-  const notifications = await Notification.find({ recipient: userId })
-    .populate("sender recipe")
-    .sort({ createdAt: -1 });
-  res.json(notifications);
+  try {
+    const userId = req.user._id || req.user.id;
+
+    // Pagination (same pattern as recipes)
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const skip = (page - 1) * limit;
+
+    const notifications = await Notification.find({ recipient: userId })
+      .populate("sender recipe")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    res.json(notifications);
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({ message: error.message });
+  }
 });
 
 /**
