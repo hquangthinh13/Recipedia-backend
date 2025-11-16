@@ -67,7 +67,7 @@ const options = {
       version: "1.0.0",
       description: `Welcome to the **Recipedia API**, the backend service powering the Recipedia web application — your go-to platform for discovering, creating, and sharing delicious recipes from around the world.
 
-This API provides endpoints for managing users, recipes, and notifications. **bearerAuth:** eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZjhkM2UzMjc5ZmZiNjc5NGQ2ZGZkMyIsImVtYWlsIjoiaHF1YW5ndGhpbmgxM0BnbWFpbC5jb20iLCJpYXQiOjE3NjIxNzIzNTQsImV4cCI6MTc2MjE3NTk1NH0.aiHji-LxdNHN4IgkILJESHHNk_3zrJLT6wRKxsxRsc0
+This API provides endpoints for managing users, recipes, and notifications.
 - [Frontend](https://recipedia-frontend-omega.vercel.app)  
 - [Backend](https://recipedia-backend-6gp7.onrender.com)
 

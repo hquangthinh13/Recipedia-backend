@@ -38,6 +38,25 @@ const recipeSchema = new mongoose.Schema(
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     comments: [commentSchema],
     likeCount: { type: Number, default: 0 },
+
+    parentRecipe: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Recipe",
+      default: null,
+      index: true,
+    },
+    remixCount: {
+      type: Number,
+      default: 0,
+    },
+    remixDepth: {
+      type: Number,
+      default: 0,
+    },
+    remixNote: {
+      type: String,
+      trim: true,
+    },
   },
   { timestamps: true }
 );

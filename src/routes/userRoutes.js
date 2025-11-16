@@ -842,7 +842,7 @@ router.get("/notifications", authMiddleware, async (req, res) => {
     const skip = (page - 1) * limit;
 
     const notifications = await Notification.find({ recipient: userId })
-      .populate("sender recipe")
+      .populate("sender recipe parentRecipe")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

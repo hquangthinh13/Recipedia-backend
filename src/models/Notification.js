@@ -13,8 +13,14 @@ const notificationSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    type: { type: String, enum: ["like", "comment", "follow"], required: true },
+    type: {
+      type: String,
+      enum: ["like", "comment", "follow", "remix"],
+      required: true,
+    },
     recipe: { type: mongoose.Schema.Types.ObjectId, ref: "Recipe" },
+    parentRecipe: { type: mongoose.Schema.Types.ObjectId, ref: "Recipe" },
+
     commentText: { type: String, trim: true },
     isRead: { type: Boolean, default: false },
   },
