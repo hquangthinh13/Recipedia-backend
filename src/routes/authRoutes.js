@@ -7,13 +7,11 @@ import dotenv from "dotenv";
 import sgMail from "@sendgrid/mail";
 import axios from "axios";
 
-
 async function getBase64FromURL(url) {
   const res = await axios.get(url, { responseType: "arraybuffer" });
   return Buffer.from(res.data).toString("base64");
 }
-const pattern = await getBase64FromURL("https://res.cloudinary.com/dee339rpr/image/upload/v1763079993/Recipedia_Pattern_Mobile_zwfmpi.svg");
-const logo = await getBase64FromURL("https://res.cloudinary.com/dee339rpr/image/upload/v1763079993/Recipedia-logo-square_fjv9ch.svg");
+
 dotenv.config();
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const pendingResets = new Map();
@@ -21,7 +19,12 @@ const pendingResets = new Map();
 const router = express.Router();
 // Temporary in-memory store for verification codes
 const pendingVerifications = new Map();
-
+const pattern = await getBase64FromURL(
+  "https://res.cloudinary.com/dee339rpr/image/upload/v1763349597/Recipedia_Pattern_tib8sj.png"
+);
+const logo = await getBase64FromURL(
+  "https://res.cloudinary.com/dee339rpr/image/upload/v1763349597/Recipedia-logo-square_rrtoxp.png"
+);
 const getDicebearAvatar = (seed) =>
   `https://api.dicebear.com/9.x/micah/svg?seed=${encodeURIComponent(
     seed || "U"
@@ -56,21 +59,21 @@ router.post("/signup", async (req, res) => {
       from: "recipedia.co@gmail.com",
       subject: `${verificationCode} is Your Recipedia Verification Code`,
       attachments: [
-    {
-      content: logo,
-      filename: "Recipedia-logo.svg",
-type: "image/png",
-      disposition: "inline",
-      content_id: "recipedia_logo"
-    },
-    {
-      content: pattern,
-      filename: "Recipedia-pattern.svg",
-type: "image/png",
-      disposition: "inline",
-      content_id: "recipedia_pattern"
-    }
-  ],
+        {
+          content: logo,
+          filename: "Recipedia-logo.png",
+          type: "image/png",
+          disposition: "inline",
+          content_id: "recipedia_logo",
+        },
+        {
+          content: pattern,
+          filename: "Recipedia-pattern.png",
+          type: "image/png",
+          disposition: "inline",
+          content_id: "recipedia_pattern",
+        },
+      ],
       html: `
       <!DOCTYPE html>
 <html lang="en">
@@ -328,22 +331,23 @@ router.post("/resend-code", async (req, res) => {
     to: email,
     from: "recipedia.co@gmail.com",
     subject: `${newCode} is your new Recipedia verification code`,
-     attachments: [
-    {
-      content: logo,
-type: "image/png",
-filename: "Recipedia-logo.png",
-      disposition: "inline",
-      content_id: "recipedia_logo"
-    },
-    {
-      content: pattern,
-      filename: "Recipedia-pattern.svg",
-type: "image/png",
-      disposition: "inline",
-      content_id: "recipedia_pattern"
-    }
-  ], html: `
+    attachments: [
+      {
+        content: logo,
+        type: "image/png",
+        filename: "Recipedia-logo.png",
+        disposition: "inline",
+        content_id: "recipedia_logo",
+      },
+      {
+        content: pattern,
+        filename: "Recipedia-pattern.png",
+        type: "image/png",
+        disposition: "inline",
+        content_id: "recipedia_pattern",
+      },
+    ],
+    html: `
     <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -585,21 +589,21 @@ router.post("/request-password-reset", async (req, res) => {
       from: "recipedia.co@gmail.com",
       subject: `${resetCode} is your Recipedia Password Reset Code`,
       attachments: [
-    {
-      content: logo,
-type: "image/png",
-filename: "Recipedia-logo.png",
-      disposition: "inline",
-      content_id: "recipedia_logo"
-    },
-    {
-      content: pattern,
-      filename: "Recipedia-pattern.svg",
-type: "image/png",
-      disposition: "inline",
-      content_id: "recipedia_pattern"
-    }
-  ],
+        {
+          content: logo,
+          type: "image/png",
+          filename: "Recipedia-logo.png",
+          disposition: "inline",
+          content_id: "recipedia_logo",
+        },
+        {
+          content: pattern,
+          filename: "Recipedia-pattern.png",
+          type: "image/png",
+          disposition: "inline",
+          content_id: "recipedia_pattern",
+        },
+      ],
       html: `
     <!DOCTYPE html>
 <html lang="en">
