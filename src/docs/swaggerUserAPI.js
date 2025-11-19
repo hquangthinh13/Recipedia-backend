@@ -42,7 +42,7 @@
  *         required: true
  *         schema:
  *           type: string
- *         example: "68fb8861bc0250763766965c"
+ *         example: "68f8d3e3279ffb6794d6dfd3"
  *     responses:
  *       200:
  *         description: User profile retrieved
