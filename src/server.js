@@ -110,6 +110,35 @@ Use this documentation to explore available endpoints, test requests, and integr
 const swaggerSpec = swaggerJSDoc(options);
 app.use("/api-docs", swaggerui.serve, swaggerui.setup(swaggerSpec));
 
+function listRoutes(app) {
+  const routes = [];
+
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      // Routes registered directly on app
+      routes.push({
+        method: Object.keys(middleware.route.methods)[0].toUpperCase(),
+        path: middleware.route.path,
+      });
+    } else if (middleware.name === "router") {
+      // Routes added via express.Router()
+      middleware.handle.stack.forEach((handler) => {
+        if (handler.route) {
+          routes.push({
+            method: Object.keys(handler.route.methods)[0].toUpperCase(),
+            path: handler.route.path,
+          });
+        }
+      });
+    }
+  });
+
+  console.log("Total routes:", routes.length);
+  console.table(routes);
+}
+
+listRoutes(app);
+
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log("Server is running.");
