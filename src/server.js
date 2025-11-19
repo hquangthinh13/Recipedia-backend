@@ -138,7 +138,13 @@ function listRoutes(app) {
 }
 
 listRoutes(app);
+// Serve static public folder
+app.use(express.static(path.join(__dirname, "public")));
 
+// Serve home page
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log("Server is running.");
