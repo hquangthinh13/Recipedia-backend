@@ -136,7 +136,7 @@ src="cid:recipedia_pattern"           alt="Recipedia Pattern"
             color: #2d2d2d;
           "
         >
-          Welcome ${userEmail}
+          Welcome ${email}
         </h1>
         
         <h2
