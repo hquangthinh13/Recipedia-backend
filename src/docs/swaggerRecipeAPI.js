@@ -61,6 +61,8 @@
  *   post:
  *     summary: Create a new recipe (with image upload)
  *     tags: [Recipes]
+ *     consumes:
+ *       - multipart/form-data
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -73,6 +75,9 @@
  *               - title
  *               - ingredients
  *               - instructions
+ *               - cookingTime
+ *               - dishType
+ *               - coverImage
  *             properties:
  *               title:
  *                 type: string
@@ -94,9 +99,6 @@
  *                 type: string
  *                 format: binary
  *                 description: Recipe cover image file
- *           encoding:
- *             ingredients:
- *               contentType: application/json
  *     responses:
  *       201:
  *         description: Recipe created successfully

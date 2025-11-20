@@ -141,19 +141,6 @@ router.post(
   }
 );
 
-// Get recipe by ID
-// router.get("/:id", async (req, res) => {
-//   try {
-//     const recipe = await Recipe.findById(req.params.id).populate(
-//       "author",
-//       "name email avatar"
-//     );
-//     if (!recipe) return res.status(404).json({ message: "Recipe not found" });
-//     res.json(recipe);
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// });
 // Get recipe by ID (including parentRecipe if any)
 router.get("/:id", async (req, res) => {
   try {

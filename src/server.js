@@ -9,6 +9,7 @@ import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import rateLimit from "express-rate-limit";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,6 +22,16 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 app.use(morgan("short"));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true, // return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // disable the `X-RateLimit-*` headers
+});
+
+//Rate limit middleware
+app.use("/api", apiLimiter);
 
 // Middleware to parse JSON request bodies
 app.use(
