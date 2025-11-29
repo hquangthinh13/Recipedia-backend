@@ -1,91 +1,68 @@
 import express from "express";
-import Recipe from "../models/Recipe.js";
-import authMiddleware from "../middleware/authMiddleware.js";
-import jwt from "jsonwebtoken";
+import multer from "multer";
 
+import authMiddleware from "../middleware/authMiddleware.js";
+import {
+  getAllRecipes,
+  getTrendingRecipes,
+  createRecipe,
+  getRecipeById,
+  getRecipeComments,
+  addComment,
+  deleteComment,
+  deleteRecipe,
+  updateRecipe,
+  toggleLike,
+  toggleFavorite,
+  remixRecipe,
+  suggestIngredientsAndTitles,
+} from "../controllers/recipeController.js";
+
+const upload = multer({ storage: multer.memoryStorage() });
 const router = express.Router();
 
-// Get all recipes (public)
-// router.get("/", async (_, res) => {
-//   try {
-//     const recipes = await Recipe.find()
-//       .populate("author", "name email")
-//       .sort({ createdAt: -1 });
-//     res.status(200).json(recipes);
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// });
-// GET /api/recipes?cookingTime=quick&dishType=starter&sort=liked
-router.get("/", async (req, res) => {
-  try {
-    const { cookingTime, dishType, sort } = req.query;
+// List recipes
+router.get("/", getAllRecipes);
 
-    const filter = {};
-    if (cookingTime) filter.cookingTime = cookingTime;
-    if (dishType) filter.dishType = dishType;
+// Search & Suggest
+router.get("/suggest", suggestIngredientsAndTitles);
 
-    let query = Recipe.find(filter).populate("author", "name email");
-
-    // Sorting
-    if (sort === "newest") query = query.sort({ createdAt: -1 });
-    if (sort === "oldest") query = query.sort({ createdAt: 1 });
-    if (sort === "liked") query = query.sort({ likes: -1 }); // assumes you track likes
-
-    const recipes = await query.exec();
-    res.json(recipes);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+// Trending recipes
+router.get("/trending", getTrendingRecipes);
 
 // Create new recipe
-router.post("/", authMiddleware, async (req, res) => {
-  try {
-    console.log("Decoded user from token:", req.user); // 👀 check token payload
-    console.log("Incoming recipe data:", req.body); // 👀 check FE payload
+router.post("/", authMiddleware, upload.single("coverImage"), createRecipe);
 
-    const {
-      title,
-      coverImage,
-      cookingTime,
-      dishType,
-      ingredients,
-      instructions,
-    } = req.body;
+// Recipe detail
+router.get("/:id", getRecipeById);
 
-    if (!title || !ingredients || ingredients.length === 0) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
+// Paginated comments
+router.get("/:id/comments", getRecipeComments);
 
-    const newRecipe = new Recipe({
-      title,
-      author: req.user.id, // always taken from token
-      coverImage,
-      cookingTime,
-      dishType,
-      ingredients,
-      instructions,
-    });
+// Add comment
+router.post("/:id/comments", authMiddleware, addComment);
 
-    await newRecipe.save();
+// Delete comment
+router.delete("/:id/comments/:commentId", authMiddleware, deleteComment);
 
-    res.status(201).json(newRecipe);
-  } catch (error) {
-    console.error("Error creating recipe:", error);
-    res.status(500).json({ message: error.message }); // return real error
-  }
-});
-router.get("/:id", async (req, res) => {
-  try {
-    const recipe = await Recipe.findById(req.params.id).populate(
-      "author",
-      "name email"
-    );
-    if (!recipe) return res.status(404).json({ message: "Recipe not found" });
-    res.json(recipe);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+// Update recipe
+router.put("/:id", authMiddleware, upload.single("coverImage"), updateRecipe);
+
+// Delete recipe
+router.delete("/:id", authMiddleware, deleteRecipe);
+
+// Like / unlike
+router.post("/:id/like", authMiddleware, toggleLike);
+
+// Favorite / unfavorite
+router.post("/:id/favorite", authMiddleware, toggleFavorite);
+
+// Remix
+router.post(
+  "/:id/remix",
+  authMiddleware,
+  upload.single("coverImage"),
+  remixRecipe
+);
+
 export default router;
