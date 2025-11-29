@@ -1,0 +1,344 @@
+// controllers/userController.js
+import User from "../models/User.js";
+import Recipe from "../models/Recipe.js";
+import Notification from "../models/Notification.js";
+
+// POST /api/users/avatar
+export const updateAvatar = async (req, res) => {
+  try {
+    const { avatarUrl } = req.body;
+
+    if (!avatarUrl || typeof avatarUrl !== "string") {
+      return res.status(400).json({ msg: "Invalid or missing avatar URL." });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found." });
+
+    user.avatar = avatarUrl;
+    await user.save();
+
+    res.json({
+      msg: "Avatar updated successfully.",
+      avatar: user.avatar,
+    });
+  } catch (error) {
+    console.error("Error updating avatar:", error);
+    res.status(500).json({ msg: "Server error updating avatar." });
+  }
+};
+
+// GET /api/users/:id/profile
+export const getUserProfile = async (req, res) => {
+  try {
+    const viewerId = req.user?._id;
+
+    const user = await User.findById(req.params.id)
+      .select(
+        "name email avatar createdAt followersCount followingCount favorites"
+      )
+      .populate({
+        path: "favorites",
+        select:
+          "title coverImage cookingTime dishType likeCount createdAt author ingredients instructions",
+        options: { sort: { createdAt: -1 } },
+        populate: { path: "author", select: "name avatar" },
+      })
+      .lean();
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const recipes = await Recipe.find({ author: req.params.id })
+      .populate("author", "name avatar")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    let isFollowing = false;
+    if (viewerId && viewerId.toString() !== req.params.id) {
+      const viewer = await User.findById(viewerId).select("following").lean();
+      isFollowing = viewer?.following?.some(
+        (f) => f.toString() === req.params.id
+      );
+    }
+
+    res.json({
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        createdAt: user.createdAt,
+        followersCount: user.followersCount,
+        followingCount: user.followingCount,
+      },
+      recipes,
+      favorites: user.favorites || [],
+      favoritesCount: user.favorites?.length || 0,
+      isFollowing,
+    });
+  } catch (err) {
+    console.error("Error fetching user profile:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/users/top
+export const getTopUsers = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit, 10) || 10;
+
+    const users = await User.find()
+      .select("name avatar followersCount createdAt")
+      .lean();
+
+    const enrichedUsers = await Promise.all(
+      users.map(async (user) => {
+        const recipes = await Recipe.find({ author: user._id }).select(
+          "likeCount commentCount"
+        );
+
+        const totalLikes = recipes.reduce(
+          (sum, r) => sum + (r.likeCount || 0),
+          0
+        );
+        const totalComments = recipes.reduce(
+          (sum, r) => sum + (r.commentCount || 0),
+          0
+        );
+        const totalRecipes = recipes.length;
+
+        const totalPoints =
+          totalLikes * 1 +
+          totalComments * 1 +
+          user.followersCount * 2 +
+          totalRecipes * 3;
+
+        return {
+          _id: user._id,
+          name: user.name,
+          avatar: user.avatar,
+          followersCount: user.followersCount,
+          createdAt: user.createdAt,
+          totalLikes,
+          totalComments,
+          totalRecipes,
+          totalPoints,
+        };
+      })
+    );
+
+    const sorted = enrichedUsers.sort((a, b) => b.totalPoints - a.totalPoints);
+
+    const ranked = sorted.map((user, index) => ({
+      ...user,
+      rank: index + 1,
+    }));
+
+    res.json({ topUsers: ranked.slice(0, limit) });
+  } catch (error) {
+    console.error("Error fetching top users:", error);
+    res.status(500).json({ message: "Server error fetching top users" });
+  }
+};
+
+// POST /api/users/:id/follow
+export const toggleFollowUser = async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+    const currentUserId = req.user.id;
+
+    if (targetUserId === currentUserId) {
+      return res.status(400).json({ msg: "You cannot follow yourself." });
+    }
+
+    const targetUser = await User.findById(targetUserId);
+    const currentUser = await User.findById(currentUserId);
+
+    if (!targetUser || !currentUser) {
+      return res.status(404).json({ msg: "User not found." });
+    }
+
+    const isFollowing = currentUser.following.includes(targetUserId);
+
+    if (isFollowing) {
+      currentUser.following = currentUser.following.filter(
+        (id) => id.toString() !== targetUserId
+      );
+      targetUser.followers = targetUser.followers.filter(
+        (id) => id.toString() !== currentUserId
+      );
+
+      currentUser.followingCount = Math.max(0, currentUser.following.length);
+      targetUser.followersCount = Math.max(0, targetUser.followers.length);
+      await currentUser.save();
+      await targetUser.save();
+
+      return res.json({
+        msg: `You unfollowed ${targetUser.name}.`,
+        isFollowing: false,
+        followersCount: targetUser.followersCount,
+      });
+    } else {
+      currentUser.following.push(targetUserId);
+      targetUser.followers.push(currentUserId);
+
+      currentUser.followingCount = Math.max(0, currentUser.following.length);
+      targetUser.followersCount = Math.max(0, targetUser.followers.length);
+      await currentUser.save();
+      await targetUser.save();
+
+      await Notification.create({
+        recipient: targetUserId,
+        sender: currentUserId,
+        type: "follow",
+      });
+
+      return res.json({
+        msg: `You are now following ${targetUser.name}.`,
+        isFollowing: true,
+        followersCount: targetUser.followersCount,
+      });
+    }
+  } catch (error) {
+    console.error("Follow/Unfollow error:", error);
+    res.status(500).json({ msg: "Server error toggling follow state." });
+  }
+};
+
+// GET /api/users/:id/followers
+export const getFollowers = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .populate("followers", "name avatar followingCount followersCount")
+      .select("name email avatar followersCount followingCount")
+      .lean();
+
+    if (!user) return res.status(404).json({ msg: "User not found." });
+
+    res.json({ followers: user.followers });
+  } catch (error) {
+    console.error("Fetch followers error:", error);
+    res.status(500).json({ msg: "Server error fetching followers." });
+  }
+};
+
+// GET /api/users/:id/following
+export const getFollowing = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .populate("following", "name avatar followingCount followersCount")
+      .select("name email avatar followingCount followersCount")
+      .lean();
+
+    if (!user) return res.status(404).json({ msg: "User not found." });
+
+    res.json({ following: user.following });
+  } catch (error) {
+    console.error("Fetch following error:", error);
+    res.status(500).json({ msg: "Server error fetching following list." });
+  }
+};
+
+// GET /api/users/notifications
+export const getNotifications = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const skip = (page - 1) * limit;
+
+    const notifications = await Notification.find({ recipient: userId })
+      .populate("sender recipe parentRecipe")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    res.json(notifications);
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PATCH /api/users/notifications/mark-all-read
+export const markAllNotificationsRead = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    await Notification.updateMany(
+      { recipient: userId, isRead: false },
+      { isRead: true }
+    );
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("Error marking notifications read:", error);
+    res
+      .status(500)
+      .json({ message: "Server error marking notifications read." });
+  }
+};
+
+// GET /api/users/:id/interactions-summary
+export const getInteractionsSummary = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { range } = req.query;
+
+    let startDate = null;
+    if (range === "7") {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+    } else if (range === "30") {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+    }
+
+    const recipes = await Recipe.find({ author: userId }).select("_id");
+    if (!recipes.length) return res.json({ data: [] });
+
+    const recipeIds = recipes.map((r) => r._id);
+
+    const matchStage = {
+      recipe: { $in: recipeIds },
+      type: { $in: ["like", "comment"] },
+    };
+    if (startDate) matchStage.createdAt = { $gte: startDate };
+
+    const results = await Notification.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            type: "$type",
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.date",
+          likes: {
+            $sum: { $cond: [{ $eq: ["$_id.type", "like"] }, "$count", 0] },
+          },
+          comments: {
+            $sum: { $cond: [{ $eq: ["$_id.type", "comment"] }, "$count", 0] },
+          },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const data = results.map((r) => ({
+      date: r._id,
+      likes: r.likes,
+      comments: r.comments,
+    }));
+
+    res.json({ data });
+  } catch (err) {
+    console.error("Error fetching interaction summary:", err);
+    res.status(500).json({ message: "Server error fetching summary" });
+  }
+};
