@@ -25,16 +25,8 @@ import { connectDB } from "./config/db.js";
 import cookieParser from "cookie-parser";
 
 const app = express();
+
 const PORT = process.env.PORT || 5001;
-app.use(morgan("short"));
-
-// Middleware to parse JSON request bodies
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-app.use(cookieParser());
-
-app.use(optionalAuth);
-app.use(rateLimiter);
 
 app.use(
   cors({
@@ -62,6 +54,16 @@ app.use(
 
 // Allow preflight
 app.options("*", cors());
+
+app.use(morgan("short"));
+
+// Middleware to parse JSON request bodies
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser());
+
+app.use(optionalAuth);
+app.use(rateLimiter);
 
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/users", userRoutes);
