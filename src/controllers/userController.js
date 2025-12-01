@@ -148,14 +148,14 @@ export const toggleFollowUser = async (req, res) => {
     const currentUserId = req.user.id;
 
     if (targetUserId === currentUserId) {
-      return res.status(400).json({ msg: "You cannot follow yourself." });
+      return res.status(400).json({ msg: "You cannot follow yourself" });
     }
 
     const targetUser = await User.findById(targetUserId);
     const currentUser = await User.findById(currentUserId);
 
     if (!targetUser || !currentUser) {
-      return res.status(404).json({ msg: "User not found." });
+      return res.status(404).json({ msg: "User not found" });
     }
 
     const isFollowing = currentUser.following.includes(targetUserId);
@@ -174,7 +174,7 @@ export const toggleFollowUser = async (req, res) => {
       await targetUser.save();
 
       return res.json({
-        msg: `You unfollowed ${targetUser.name}.`,
+        msg: `You unfollowed ${targetUser.name}`,
         isFollowing: false,
         followersCount: targetUser.followersCount,
       });
@@ -194,14 +194,14 @@ export const toggleFollowUser = async (req, res) => {
       });
 
       return res.json({
-        msg: `You are now following ${targetUser.name}.`,
+        msg: `You are now following ${targetUser.name}`,
         isFollowing: true,
         followersCount: targetUser.followersCount,
       });
     }
   } catch (error) {
     console.error("Follow/Unfollow error:", error);
-    res.status(500).json({ msg: "Server error toggling follow state." });
+    res.status(500).json({ msg: "Server error toggling follow state" });
   }
 };
 
@@ -213,12 +213,12 @@ export const getFollowers = async (req, res) => {
       .select("name email avatar followersCount followingCount")
       .lean();
 
-    if (!user) return res.status(404).json({ msg: "User not found." });
+    if (!user) return res.status(404).json({ msg: "User not found" });
 
     res.json({ followers: user.followers });
   } catch (error) {
     console.error("Fetch followers error:", error);
-    res.status(500).json({ msg: "Server error fetching followers." });
+    res.status(500).json({ msg: "Server error fetching followers" });
   }
 };
 
@@ -230,12 +230,12 @@ export const getFollowing = async (req, res) => {
       .select("name email avatar followingCount followersCount")
       .lean();
 
-    if (!user) return res.status(404).json({ msg: "User not found." });
+    if (!user) return res.status(404).json({ msg: "User not found" });
 
     res.json({ following: user.following });
   } catch (error) {
     console.error("Fetch following error:", error);
-    res.status(500).json({ msg: "Server error fetching following list." });
+    res.status(500).json({ msg: "Server error fetching following list" });
   }
 };
 
