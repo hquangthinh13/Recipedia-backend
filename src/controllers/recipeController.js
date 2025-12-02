@@ -164,6 +164,46 @@ export const getRecipeById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+/**
+ * GET /api/recipes/:id/remixes
+ * Query params:
+ *   page  – page number (default 1)
+ *   limit – items per page (default 10)
+ */
+export const getRecipeRemixes = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+    const skip = (page - 1) * limit;
+
+    const filter = { parentRecipe: id };
+
+    const [remixes, total] = await Promise.all([
+      Recipe.find(filter)
+        .sort({ createdAt: -1 }) // newest remixes first
+        .skip(skip)
+        .limit(limit)
+        .populate("author", "name email avatar")
+        .select(
+          "title coverImage author remixCount remixDepth remixNote createdAt dishType cookingTime likeCount comments parentRecipe"
+        ),
+      Recipe.countDocuments(filter),
+    ]);
+
+    return res.json({
+      page,
+      limit,
+      total,
+      totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+      recipes: remixes || [], // will be [] when no children
+    });
+  } catch (error) {
+    console.error("Get recipe remixes failed:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
 
 /**
  * GET /api/recipes/:id/comments?page=&limit=&sort=

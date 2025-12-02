@@ -4,26 +4,28 @@ The backend server for the Recipedia application. This RESTful API handles user 
 
 ## Tech Stack
 
-* **Runtime:** Node.js
-* **Framework:** Express.js
-* **Database:** MongoDB (via Mongoose)
-* **Authentication:** JWT (JSON Web Tokens) & Cookies
-* **File Storage:** Cloudinary (with Multer & Streamifier)
-* **Image Processing:** Sharp
-* **Email Service:** SendGrid
-* **Documentation:** Swagger UI
+- **Runtime:** Node.js
+- **Framework:** Express.js
+- **Database:** MongoDB (via Mongoose)
+- **Authentication:** JWT (JSON Web Tokens) & Cookies
+- **File Storage:** Cloudinary (with Multer & Streamifier)
+- **Image Processing:** Sharp
+- **Email Service:** SendGrid
+- **Documentation:** Swagger UI
 
 ## Prerequisites
 
 Before you begin, ensure you have met the following requirements:
-* Node.js (v16 or higher)
-* MongoDB connection string (Local or Atlas)
-* Cloudinary account (for image upload)
-* SendGrid API Key (for sending emails)
+
+- Node.js (v16 or higher)
+- MongoDB connection string (Local or Atlas)
+- Cloudinary account (for image upload)
+- SendGrid API Key (for sending emails)
 
 ## Installation
 
 1.  **Install dependencies**
+
     ```bash
     npm install
     ```
@@ -51,17 +53,21 @@ Before you begin, ensure you have met the following requirements:
     # SendGrid (Email Service)
     SENDGRID_API_KEY=your_sendgrid_api_key
     EMAIL_FROM=noreply@recipedia.com
+
+    # Upstash
+    UPSTASH_REDIS_REST_URL=
+    UPSTASH_REDIS_REST_TOKEN=
     ```
 
 3.  **Run the Server**
-    * **Development (Auto-reload):**
-        ```bash
-        npm run dev
-        ```
-    * **Production:**
-        ```bash
-        npm start
-        ```
+    - **Development (Auto-reload):**
+      ```bash
+      npm run dev
+      ```
+    - **Production:**
+      ```bash
+      npm start
+      ```
 
 ## API Documentation
 

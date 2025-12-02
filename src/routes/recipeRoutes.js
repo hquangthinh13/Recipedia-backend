@@ -16,6 +16,7 @@ import {
   toggleFavorite,
   remixRecipe,
   suggestIngredientsAndTitles,
+  getRecipeRemixes,
 } from "../controllers/recipeController.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -35,6 +36,9 @@ router.post("/", authMiddleware, upload.single("coverImage"), createRecipe);
 
 // Recipe detail
 router.get("/:id", getRecipeById);
+
+// Remix children (paginated)
+router.get("/:id/remixes", getRecipeRemixes);
 
 // Paginated comments
 router.get("/:id/comments", getRecipeComments);
