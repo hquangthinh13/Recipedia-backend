@@ -147,7 +147,7 @@ export const getRecipeById = async (req, res) => {
       .populate({
         path: "parentRecipe",
         select:
-          "title coverImage author remixCount createdAt dishType cookingTime likeCount comments",
+          "title coverImage author remixCount createdAt dishType cookingTime likeCount comments parentRecipe",
         populate: {
           path: "author",
           select: "name avatar",
