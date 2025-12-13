@@ -433,7 +433,9 @@ export const updateRecipe = async (req, res) => {
     const userId = req.user.id;
 
     const recipe = await Recipe.findById(recipeId);
-    if (!recipe) return res.status(404).json({ message: "Recipe not found" });
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
 
     if (String(recipe.author) !== String(userId)) {
       return res.status(403).json({ message: "Unauthorized" });
@@ -442,97 +444,60 @@ export const updateRecipe = async (req, res) => {
     const { title, cookingTime, dishType, ingredients, instructions } =
       req.body;
 
-    let newCoverUrl = recipe.coverImage;
-    let newPublicId = recipe.coverImagePublicId;
+    // Parse ingredients (supports multipart/form-data JSON string)
+    let parsedIngredients = ingredients;
+    if (typeof ingredients === "string") {
+      try {
+        parsedIngredients = JSON.parse(ingredients);
+      } catch {
+        return res.status(400).json({ message: "Invalid ingredients JSON" });
+      }
+    }
 
+    // Handle image update
     if (req.file) {
-      const imageBuffer = await sharp(req.file.buffer)
-        .resize({ width: 1280, height: 720, fit: "cover" })
-        .toFormat("jpeg")
-        .jpeg({ quality: 90 })
-        .toBuffer();
+      const oldPublicId = recipe.coverImagePublicId;
 
-      if (recipe.coverImagePublicId) {
-        const uploadStream = () =>
-          new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-              {
-                public_id: recipe.coverImagePublicId,
-                overwrite: true,
-                invalidate: true,
-                resource_type: "image",
-                folder: undefined,
-                format: "jpeg",
-              },
-              (error, result) => (error ? reject(error) : resolve(result))
-            );
-            streamifier.createReadStream(imageBuffer).pipe(stream);
+      const uploaded = await processAndUploadRecipeImage(req.file);
+      recipe.coverImage = uploaded.coverImage;
+      recipe.coverImagePublicId = uploaded.coverImagePublicId;
+
+      // Delete old Cloudinary image if it exists and is different
+      if (oldPublicId && oldPublicId !== uploaded.coverImagePublicId) {
+        try {
+          await cloudinary.uploader.destroy(oldPublicId, {
+            resource_type: "image",
+            invalidate: true,
           });
-
-        const result = await uploadStream();
-        newCoverUrl = result.secure_url;
-        newPublicId = result.public_id;
-      } else {
-        const uploadStream = () =>
-          new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-              {
-                folder: "recipes",
-                format: "jpeg",
-                resource_type: "image",
-              },
-              (error, result) => (error ? reject(error) : resolve(result))
-            );
-            streamifier.createReadStream(imageBuffer).pipe(stream);
-          });
-
-        const result = await uploadStream();
-        newCoverUrl = result.secure_url;
-        newPublicId = result.public_id;
-
-        if (recipe.coverImage) {
-          const match = recipe.coverImage.match(
-            /\/upload\/(?:v\d+\/)?(.+?)\.(?:jpg|jpeg|png|gif|webp|svg)$/i
-          );
-          const oldPublicId = match?.[1];
-          if (oldPublicId) {
-            try {
-              await cloudinary.uploader.destroy(oldPublicId, {
-                resource_type: "image",
-                invalidate: true,
-              });
-            } catch (e) {
-              console.error("Cloudinary destroy (derived) failed:", e);
-            }
-          }
+        } catch (err) {
+          console.error("Failed to delete old Cloudinary image:", err);
         }
       }
     }
 
-    const parsedIngredients =
-      typeof ingredients === "string" ? JSON.parse(ingredients) : ingredients;
-
-    if (title) recipe.title = title;
-    if (cookingTime) recipe.cookingTime = cookingTime;
-    if (dishType) recipe.dishType = dishType;
-    if (parsedIngredients) recipe.ingredients = parsedIngredients;
-    if (instructions) recipe.instructions = instructions;
-    recipe.coverImage = newCoverUrl;
-    recipe.coverImagePublicId = newPublicId;
+    // Update fields only if provided
+    if (title !== undefined) recipe.title = title;
+    if (cookingTime !== undefined) recipe.cookingTime = cookingTime;
+    if (dishType !== undefined) recipe.dishType = dishType;
+    if (parsedIngredients !== undefined) recipe.ingredients = parsedIngredients;
+    if (instructions !== undefined) recipe.instructions = instructions;
 
     const updated = await recipe.save();
+
     const populated = await Recipe.findById(updated._id).populate(
       "author",
       "name avatar _id"
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Recipe updated successfully",
       recipe: populated,
     });
   } catch (error) {
     console.error("Error updating recipe:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };
 
