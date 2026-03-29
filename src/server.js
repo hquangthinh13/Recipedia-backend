@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import cors from "cors";
-import morgan from "morgan";
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerui from "swagger-ui-express";
 
