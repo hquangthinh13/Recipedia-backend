@@ -1,5 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+
 import cors from "cors";
 import morgan from "morgan";
 import swaggerJSDoc from "swagger-jsdoc";
@@ -13,8 +15,6 @@ import optionalAuth from "./middleware/optionalAuth.js";
 // ESM replacements for __filename and __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-dotenv.config();
 
 import recipeRoutes from "./routes/recipeRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -49,7 +49,7 @@ app.use(
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
-  })
+  }),
 );
 
 // Allow preflight

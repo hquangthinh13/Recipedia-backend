@@ -17,6 +17,7 @@ const getClientIdentifier = (req) => {
 };
 
 const rateLimiter = async (req, res, next) => {
+  return next(); // Disable rate limiting for now
   if (req.method === "OPTIONS") {
     return next(); // skip rate limiting for preflight requests
   }
