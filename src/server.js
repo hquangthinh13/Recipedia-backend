@@ -10,7 +10,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 import rateLimiter from "./middleware/rateLimiter.js";
 import optionalAuth from "./middleware/optionalAuth.js";
+import dns from "dns";
 
+dns.setDefaultResultOrder("ipv4first");
 // ESM replacements for __filename and __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
